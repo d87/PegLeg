@@ -52,14 +52,13 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 			if (FireEvent(L,events[trig][i],VKEYS[p->vkCode], (int)p->vkCode,(int)p->scanCode))
 				block = 1;
 		}
-		//free(p);
 	}
 			
   }
   return(block ? 1 : CallNextHookEx(NULL, nCode, wParam,lParam));
 }
 
-LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM
+/*LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM
 lParam)
 {
 	if (nCode == HC_ACTION) 
@@ -113,7 +112,7 @@ lParam)
 	
   return(CallNextHookEx(NULL, nCode, wParam,lParam));
   //return(fEatKeystroke ? 1 : CallNextHookEx(NULL, nCode, wParam,lParam));
-}
+}*/
 
 void error (lua_State *L, const char *fmt, ...) {
 	va_list argp;
@@ -160,66 +159,8 @@ int FireEvent(lua_State *L, int index, char * VK_NAME, int vkCode, int scanCode)
 	}
 	lua_pop(L, 1);
 	return fBlock;
-	/*if (lua_isstring(L, -1)){
-		const char * cmd = lua_tostring(L, -1);
-		if (!strcmp(cmd,"block")) return 1;
-	}
-	lua_pop(L, 1);*/
-	//int scan = lua_tointeger(L, -1);LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
-
-	//if ( scan == scanCode) MessageBox(0,"fucked","yeah",0);
-	return 0;
-}
-/*
-void eventThread(void *arglist) {
-	struct event_arglist * args = (event_arglist*)arglist;
-	lua_rawgeti(args->L, LUA_REGISTRYINDEX, args->index);
-	lua_pushstring(args->L, args->VK_NAME);
-	lua_pushinteger(args->L, args->vkCode);
-	lua_pushinteger(args->L, args->scanCode);
-	if (lua_pcall(args->L, 3, 0, 0) != 0)
-	//if (lua_pcall(args->L, 3, 1, 0) != 0)
-        error(args->L, "error run6ning function: %s", lua_tostring(args->L, -1));
-	free(args);
-	//if (lua_isstring(L, -1)){
-	//	const char * cmd = lua_tostring(L, -1);
-	//	if (!strcmp(cmd,"block")) return 1;
-	//}
-	//lua_pop(args->L, 1);
-
-	_endthread();
 }
 
-int FireEvent(lua_State *L, int index, char * VK_NAME, int vkCode, int scanCode) {
-	//gui = (gui_struct *)malloc(sizeof(gui_struct));
-	struct event_arglist * arglist = (event_arglist *)malloc(sizeof(event_arglist));
-	//struct event_arglist arglist;
-	arglist->L = L;
-	arglist->index = index;
-	arglist->VK_NAME = VK_NAME;
-	arglist->vkCode = vkCode;
-	arglist->scanCode = scanCode;
-
-	_beginthread(eventThread, 0, (void*) arglist);
-
-	
-	//int scan = lua_tointeger(L, -1);LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
-
-	//if ( scan == scanCode) MessageBox(0,"fucked","yeah",0);
-	return 0;
-}
-*/
-
-//int FireHotkey(lua_State *L, int index) {}
-
-/*void OnUpdateThread( void *param){
-	while (1) {
-		for (int i=0; events[ONUPDATE][i] && i < MAX_EVENTS; i++ )
-			FireEvent(L,events[ONUPDATE][i],0, 0, 0);
-		Sleep(200);
-	}
-	return;
-}*/
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -299,12 +240,3 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
   return 1;
 }
-
-
-
-
- //fd = malloc(sizeof(WIN32_FIND_DATA));
-  //fh = FindFirstFile((LPCSTR) path,fd);
-//if((0 != strcmp(fd->cFileName,".")) && (0 != strcmp(fd->cFileName,"..")))
-//while(FindNextFile(fh,fd));
- //FindClose(fh);

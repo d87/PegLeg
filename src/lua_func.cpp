@@ -189,8 +189,6 @@ static int l_GetWindowTitle( lua_State *luaVM ) {
 static int l_AddScript( lua_State *luaVM ) {
 	const char * filename = luaL_checkstring(luaVM, 1);
 	LoadScript(luaVM, filename);
-	//if (luaL_loadfile(luaVM, filename) || lua_pcall(luaVM, 0, 0, 0))
-    //    error(luaVM, "cannot run configuration file: %s\r\n", lua_tostring(luaVM, -1) );
 	lua_pushboolean( luaVM, 1 );
 	return 1;
 }
@@ -267,13 +265,10 @@ int __stdcall EWProc(HWND hwnd,LPARAM lParam)
 {
 	struct enum_struct * wData = (struct enum_struct *)lParam;
 	GetWindowText(hwnd,wData->buffer, 200);
-	//else GetWindowModuleFileName(hwnd, wData->buffer, 200);
 	if (strstr(wData->buffer,wData->pattern)) {
-		//ShowWindow(hwnd,SW_SHOWMAXIMIZED);
 		wData->hwndReturned = hwnd;
 		return 0;
 	}
-	//free(buffer);
 	return 1;
 }
 int l_ShowWindow( lua_State *L ) {

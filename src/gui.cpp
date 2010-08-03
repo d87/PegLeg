@@ -7,8 +7,6 @@
 #include "pegleg.h"
 #define WM_SHELLNOTIFY          (WM_USER+1)
 
-//extern HHOOK hhkLowLevelKeyboard;
-//extern HHOOK hhkLowLevelMouse;
 extern int Shutdown();
 
 gui_struct *gui = 0;
@@ -16,8 +14,6 @@ gui_struct *gui = 0;
 //int WINAPI WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nCmdShow )
 void guiThread( void *param  )
 {
-	//gui->event_ready = CreateEvent(NULL, FALSE, FALSE, NULL);
-
 	HINSTANCE hInstance = (HINSTANCE)param;
 	gui->hInstance = hInstance;
 
@@ -107,8 +103,6 @@ int OnCreate( HWND hwnd)
 	dta.uCallbackMessage = WM_SHELLNOTIFY;
 	dta.hIcon = LoadIcon(gui->hInstance, MAKEINTRESOURCE(ID_ICON1));
 	strcpy(dta.szTip, "PegLeg");
-	//strcat(dta.szTip, " ");
-	//strcat(dta.szTip, D2CS_VERSION_STRING);
 	Shell_NotifyIcon(NIM_ADD, &dta);
 	}
 	return 1;
@@ -133,7 +127,6 @@ void KillTrayIcon(HWND hwnd)
 }
 
 static void OnCommand(HWND hwnd, int id)
-					  //, HWND hwndCtl, UINT codeNotify)
 {
 	if( id == ID_EXIT ) {
 		Shutdown();
