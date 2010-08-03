@@ -1,0 +1,3 @@
+#include "res.h"
+//0  ICON  "pegleg.ico"
+ID_ICON1 ICON "pegleg.ico"
