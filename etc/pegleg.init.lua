@@ -12,7 +12,7 @@ Start ("cmdline" [,"workingdir"]) - start new process
 timerID = CreateTimer(interval, callback) - Create new timer. Timers repeatedly execute callback function after a specified interval, in milliseconds.
 KillTimer(timerID)
 activeWindowTitle = GetWindowTitle()
-activeWindowProcessName = GetWindowProcess()
+activeWindowProcessName = GetWindowProcess()  - Note that if you're running 32bit pegleg on 64bit version of windows, you can't retreive 64bit process names.
 x,y = GetCursorPos()
 
 Reload() - reload configuration files

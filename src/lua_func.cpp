@@ -323,16 +323,15 @@ int l_GetWindowProcess( lua_State *L ) {
 	unsigned long pid;
 	GetWindowThreadProcessId(GetForegroundWindow(), &pid);
 
-	HANDLE hProcess = OpenProcess( PROCESS_QUERY_INFORMATION |
-                                   PROCESS_VM_READ,
-                                   FALSE, pid );
+	HANDLE hProcess = OpenProcess( PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid );
 
 	if (NULL != hProcess )
     {
 		HMODULE hMod;
         DWORD bytesReturned = 0;
-
-        if ( EnumProcessModules( hProcess, &hMod, sizeof(hMod), &bytesReturned) )
+		
+		// If this function is called from a 32-bit application running on WOW64, it can only enumerate the modules of a 32-bit process. If the process is a 64-bit process, this function fails and the last error code is ERROR_PARTIAL_COPY (299).
+        if ( EnumProcessModulesEx( hProcess, &hMod, sizeof(hMod), &bytesReturned, LIST_MODULES_ALL) )
         {
 			if (bytesReturned) {
 				char *pname = (char *)malloc(sizeof(char)*200);
@@ -341,7 +340,6 @@ int l_GetWindowProcess( lua_State *L ) {
 				free(pname);
 				return 1;
 			}
-
         }
     }
 	return 0;

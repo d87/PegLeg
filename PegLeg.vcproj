@@ -316,6 +316,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Copying lua5.1.dll for current platform"
+				CommandLine="copy .\lua\lib64\lua5.1.dll .\bin\x64"
 			/>
 		</Configuration>
 		<Configuration
