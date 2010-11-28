@@ -17,12 +17,15 @@ int CreateLua() {
 	lua_register(L, "MouseInput", l_MouseInput);
 	lua_register(L, "KeyboardInput", l_KeyboardInput);
 	lua_register(L, "GetCursorPos", l_GetCursorPos);
+	lua_register(L, "IsPressed", l_IsPressed);
 	lua_register(L, "ShowWindow", l_ShowWindow);
 	lua_register(L, "RegisterHotKey", l_RegisterHotKey);
 	lua_register(L, "GetWindowProcess", l_GetWindowProcess);
 	lua_register(L, "CreateTimer", l_CreateTimer);
 	lua_register(L, "KillTimer", l_KillTimer);
 	lua_register(L, "Reload", l_Reload);
+	lua_register(L, "ShowHUDCP", l_ShowHUDCP);
+	lua_register(L, "HideHUDCP", l_HideHUDCP);
 	
 	lua_newtable(L);
 	lua_setglobal(L, "console");
@@ -246,6 +249,21 @@ static int l_KeyboardInput( lua_State *L){
 	return 0;
 }
 
+static int l_IsPressed( lua_State *L){
+	char * name = (char *)luaL_checkstring(L, 1);
+	int vkCode = 0;
+	for (int i=1; i<255; i++ ) {
+		if (VKEYS[i][0]) {
+			if (!strcmp(VKEYS[i],name))
+				vkCode = i;
+		}
+	}
+	if (!vkCode) return 1;
+
+	lua_pushboolean(L, GetAsyncKeyState(vkCode) ? 1 : 0);
+	return 1;
+}
+
 static int l_MouseInput( lua_State *L){
 	char * eventname =(char *)luaL_checkstring(L, 1);
 	if (!strcmp(_strupr(eventname),"MOVE")) {
@@ -375,4 +393,14 @@ int l_KillTimer( lua_State *L ) {
 		}
 	lua_pushnil(L);
 	return 1;
+}
+
+int l_ShowHUDCP( lua_State *L ) {
+	PhotoshopShowHUDCP();
+	return 0;
+}
+
+int l_HideHUDCP( lua_State *L ) {
+	PhotoshopShowHUDCP();
+	return 0;
 }

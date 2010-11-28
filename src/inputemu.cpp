@@ -20,7 +20,7 @@ int KeyboardSend(char *name, int mode) {
 	}
 	if (mode != -1) {
 		ZeroMemory(&key,sizeof(INPUT));
-		key.type = key.type=INPUT_KEYBOARD;
+		key.type = INPUT_KEYBOARD;
 		key.ki.wVk = vkCode;
 		key.ki.dwFlags = KEYEVENTF_KEYUP;
 		SendInput(1,&key,sizeof(INPUT));
@@ -64,6 +64,7 @@ int MouseInput(char *eventname, int x, int y, int isabsolute) {
 	//const char * eventname = luaL_checkstring(L, 1);
 
 	int eventflag = 0;
+	int mouseData = 0;
 	if		(!strcmp(_strupr(eventname),"LEFTDOWN")) eventflag = MOUSEEVENTF_LEFTDOWN;
 	else if (!strcmp(_strupr(eventname),"LEFTUP")) eventflag = MOUSEEVENTF_LEFTUP;
 	else if (!strcmp(_strupr(eventname),"RIGHTDOWN")) eventflag = MOUSEEVENTF_RIGHTDOWN;
@@ -71,6 +72,10 @@ int MouseInput(char *eventname, int x, int y, int isabsolute) {
 	else if (!strcmp(_strupr(eventname),"MOVE")) eventflag = MOUSEEVENTF_MOVE;
 	else if (!strcmp(_strupr(eventname),"MIDDLEDOWN")) eventflag = MOUSEEVENTF_MIDDLEDOWN;
 	else if (!strcmp(_strupr(eventname),"MIDDLEUP")) eventflag = MOUSEEVENTF_MIDDLEUP;
+	else if (!strcmp(_strupr(eventname),"4DOWN")){ eventflag = MOUSEEVENTF_XDOWN; mouseData = XBUTTON1; }
+	else if (!strcmp(_strupr(eventname),"4UP")){ eventflag = MOUSEEVENTF_XUP; mouseData = XBUTTON1; }
+	else if (!strcmp(_strupr(eventname),"5DOWN")){ eventflag = MOUSEEVENTF_XDOWN; mouseData = XBUTTON2; }
+	else if (!strcmp(_strupr(eventname),"5UP")){ eventflag = MOUSEEVENTF_XUP; mouseData = XBUTTON2; }
 
 	int absolute = 0;
 	int fx = 0;
@@ -94,9 +99,39 @@ int MouseInput(char *eventname, int x, int y, int isabsolute) {
 
 	INPUT  mouse={0};
 	mouse.type=INPUT_MOUSE;
+	if (mouseData) mouse.mi.mouseData = mouseData;
 	mouse.mi.dx=fx;
 	mouse.mi.dy=fy;
 	mouse.mi.dwFlags=absolute|eventflag;
 	SendInput(1,&mouse,sizeof(INPUT));
+	return 1;
+}
+
+
+int PhotoshopShowHUDCP(){
+	INPUT events[3];
+	events[0].type=INPUT_KEYBOARD;
+	events[0].ki.wVk = 161; // RSHIFT
+	//events[0].ki.dwFlags = KEYEVENTF_KEYDOWN;
+	events[1].type=INPUT_KEYBOARD;
+	events[1].ki.wVk = 165; // RALT
+	//events[1].ki.dwFlags = KEYEVENTF_KEYDOWN
+	events[2].type=INPUT_MOUSE;
+	events[2].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+	SendInput(3,events,sizeof(INPUT));
+	return 1;
+}
+
+int PhotoshopHideHUDCP(){
+	INPUT events[3];
+	events[0].type=INPUT_KEYBOARD;
+	events[0].ki.wVk = 161; // RSHIFT
+	events[0].ki.dwFlags = KEYEVENTF_KEYUP;
+	events[1].type=INPUT_KEYBOARD;
+	events[1].ki.wVk = 165; // RALT
+	events[1].ki.dwFlags = KEYEVENTF_KEYUP;
+	events[2].type=INPUT_MOUSE;
+	events[2].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+	SendInput(3,events,sizeof(INPUT));
 	return 1;
 }

@@ -33,6 +33,7 @@ int l_HideConsole( lua_State *luaVM );
 int l_ClearConsole( lua_State *luaVM );
 int l_SetConsoleBackgroundColor( lua_State *L );
 int l_SetConsoleTextColor( lua_State *L );
+int l_IsPressed( lua_State *L );
 int l_GetCursorPos( lua_State *L );
 int l_KeyboardInput( lua_State *L);
 int l_MouseInput( lua_State *L);
@@ -41,5 +42,8 @@ int l_RegisterHotKey( lua_State *L );
 int l_CreateTimer( lua_State *L );
 int l_KillTimer( lua_State *L );
 int l_Reload( lua_State *L );
+
+int l_ShowHUDCP( lua_State *L );
+int l_HideHUDCP( lua_State *L );
 
 #endif
