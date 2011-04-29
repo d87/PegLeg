@@ -5,50 +5,26 @@ RegisterEvent("OnCreate",function ()
 --~     print ("Edit config.lua to change configuration and disable console on startup")
 end)
 
+local timeout = {}
 timeout["ALTS"] = os.time()
 RegisterHotKey("ALT","S",function ()
-    if GetWindowTitle() == "Starcraft II" then return end
+    if GetWindowTitle() == "Starcraft 2" then return end
     timeout["ALTS"] = os.time()+3
 end)
--- Default Sequence: Alt+S -> <keys from actions table>
-local actions = {
-    ['3'] = function() sh("start S:\\!ftp\\") end,
-    ['4'] = function() sh('start S:\\Games\\') end,
-    ['5'] = function() sh('start H:\\_Starcraft2\\Replays\\') end,
-    ['6'] = function() sh("start G:\\") end,
-    ['7'] = function() sh("start D:\\") end,
-    ['8'] = function() sh("start H:\\DUMP\\") end,
-    ['9'] = function() sh("start C:\\") end,
-    
-    ['B'] = function() sh("H:\\DesktopTrash\\!notes.txt") end,
-    ['E'] = function() Start('G:\\putty.exe -load "nevihta"') end,
-    ['R'] = function() Start('G:\\putty.exe -load "webfaction"') end,
-    ['F12'] = function() photoshop_hooks_enabled = not photoshop_hooks_enabled end,
-    ['F9'] = Reload,
-    ['F10'] = Shutdown,
---~     ['F11'] = console.Hide,
-    ['F11'] = console.Show,
-}
-RegisterEvent("KeyDown",function (key,vk,scan)
-    if timeout["ALTS"] and os.time() < timeout["ALTS"] then
-        timeout["ALTS"] = nil
-        if actions[key] then
-            actions[key]()
-            return true
-        end
-    end
-    
-    if photoshop_hooks_enabled then
-        if GetWindowProcess() == "Photoshop.exe" then
-            photoshop_hooks(key)
-        end
-    end
-end)
-
 
 local photoshop_hooks_enabled = false
 local ps_opacity = 70
+local ps_hudcp_onkeyup_event
+local ps_hudcp_onkeyup_func = function(key)
+    if key == "F1" then
+        MouseInput("RIGHTUP")
+        KeyboardInput("<(ALT)<(SHIFT)")
+        UnregisterEvent(ps_hudcp_onkeyup_event)
+        ps_hudcp_onkeyup_event = nil
+    end
+end
 local function photoshop_hooks(key)
+    -- Toggle color picker
     if key == "F4" then
         if string.find(GetWindowTitle(),"Color Picker") then
             KeyboardInput("(RETURN)")
@@ -71,21 +47,51 @@ local function photoshop_hooks(key)
             if ps_opacity <= 97 then ps_opacity = ps_opacity + 3 end
             string.format("%02d",ps_opacity):gsub(".", KeyboardInput)
     end
+    if key == "F1" then
+        -- HUD Color picker toggle
+        if ps_hudcp_onkeyup_event then return end
+        KeyboardInput(">(SHIFT)>(ALT)");
+        MouseInput("RIGHTDOWN");
+        ps_hudcp_onkeyup_event = RegisterEvent("KeyUp",ps_hudcp_onkeyup_func)
+        return true -- eat keypress
+    end
 end
 
-
-
---~ local bot = false
---~ local time = 0
---~     if GetWindowTitle() == "XX" then
---~         if key == "F12" then
---~             --MouseInput("LEFTDOWN")            
---~             --KeyboardInput("(RETURN)")
---~             --MouseInput("LEFTUP")
---~             bot = not bot
---~         end
---~         return
---~     end
+local actions = {
+    ['3'] = function() sh[[start D:\]] end,
+    ['4'] = function() sh[[start H:\games\]] end,
+    ['5'] = function() sh[[start H:\games\_StarCraft2\Replays\]] end,
+    ['6'] = function() sh[[start H:\soft]] end,
+    ['7'] = function() sh[[start D:\Downloads\]] end,
+    ['8'] = function() sh[[start N:\]] end,
+    ['9'] = function() sh[[start C:\]] end,
+    ['R'] = function() sh[[D:\_dump\]] end,
+    ['B'] = function() sh[[D:\_dump\__DesktopTrash\_notes.txt]] end,
+    ['E'] = function() Start[[H:\soft\putty.exe -load "nevihta"]] end,
+    ['R'] = function() Start[[H:\soft\putty.exe -load "nevihta_auth"]] end,
+    ['F12'] = function()
+        photoshop_hooks_enabled = not photoshop_hooks_enabled 
+    end,
+    ['F9'] = Reload,
+    ['F10'] = Shutdown,
+--~     ['F11'] = console.Hide,
+    ['F11'] = console.Show,
+}
+RegisterEvent("KeyDown",function (key,vk,scan)
+    if timeout["ALTS"] and os.time() < timeout["ALTS"] then
+        timeout["ALTS"] = nil
+        if actions[key] then
+            actions[key]()
+            return true
+        end
+    end
+    
+    if photoshop_hooks_enabled then
+        if GetWindowProcess() == "Photoshop.exe" then
+            return photoshop_hooks(key)
+        end
+    end
+end)
 
 --~ local t1 = 0
 --~ local t2 = 0
@@ -107,17 +113,7 @@ end
 --~ end)
 
 --~ RegisterHotKey("ALT","G",function ()
---~     print ("RAAA")
+--~     print (GetWindowProcess())
 --~ end)
-
-
---~ RegisterEvent("KeyDown",KeyDown)
---~ RegisterEvent("KeyUp",KeyUp)
-
-
---- MOUSE HOOKS DISABLED ---
---~ RegisterEvent("MouseDown",MouseDown)
---~ RegisterEvent("MouseUp",MouseUp)
---~ RegisterEvent("MouseMove",mm)
 
 

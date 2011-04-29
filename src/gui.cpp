@@ -118,7 +118,7 @@ int OnClose( HWND hwnd)
 void KillTrayIcon(HWND hwnd)
 {
     NOTIFYICONDATA dta;
-     
+
     dta.cbSize = sizeof(NOTIFYICONDATA);
     dta.hWnd = hwnd;
     dta.uID = ID_TRAY;

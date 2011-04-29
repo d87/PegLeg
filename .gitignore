@@ -1,9 +1,12 @@
-bin
+bin/*
 obj
 test
+ipch
 *.user
 *.suo
 *.ncb
 *.pdb
 *.idb
 *.obj
+*.sdf
+*.opensdf

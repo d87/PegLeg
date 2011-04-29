@@ -36,8 +36,8 @@ int KeyboardInput(char *str) {
 	int bi = 0;
 	int kbevent = 0;
 	while (str[i]) {
-		if (str[i] == '>') { kbevent = -1; continue; }
-		if (str[i] == '<') { kbevent = 1; continue; }
+		if (str[i] == '>') { kbevent = -1; i++; continue; }
+		if (str[i] == '<') { kbevent = 1; i++; continue; }
 
 		if (str[i] == '(') {
 			i++;
@@ -104,34 +104,5 @@ int MouseInput(char *eventname, int x, int y, int isabsolute) {
 	mouse.mi.dy=fy;
 	mouse.mi.dwFlags=absolute|eventflag;
 	SendInput(1,&mouse,sizeof(INPUT));
-	return 1;
-}
-
-
-int PhotoshopShowHUDCP(){
-	INPUT events[3];
-	events[0].type=INPUT_KEYBOARD;
-	events[0].ki.wVk = 161; // RSHIFT
-	//events[0].ki.dwFlags = KEYEVENTF_KEYDOWN;
-	events[1].type=INPUT_KEYBOARD;
-	events[1].ki.wVk = 165; // RALT
-	//events[1].ki.dwFlags = KEYEVENTF_KEYDOWN
-	events[2].type=INPUT_MOUSE;
-	events[2].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
-	SendInput(3,events,sizeof(INPUT));
-	return 1;
-}
-
-int PhotoshopHideHUDCP(){
-	INPUT events[3];
-	events[0].type=INPUT_KEYBOARD;
-	events[0].ki.wVk = 161; // RSHIFT
-	events[0].ki.dwFlags = KEYEVENTF_KEYUP;
-	events[1].type=INPUT_KEYBOARD;
-	events[1].ki.wVk = 165; // RALT
-	events[1].ki.dwFlags = KEYEVENTF_KEYUP;
-	events[2].type=INPUT_MOUSE;
-	events[2].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
-	SendInput(3,events,sizeof(INPUT));
 	return 1;
 }

@@ -1,5 +1,4 @@
-#ifndef _gui_included
-#define _gui_included
+#pragma once
 
 #include "lua_func.h"
 
@@ -21,5 +20,3 @@ void guiThread( void *param  );
 void guiAddText(const char *str);
 int gui_printf( const char *format, va_list arglist );
 LRESULT CALLBACK WndProc(HWND,UINT,WPARAM,LPARAM);
-
-#endif

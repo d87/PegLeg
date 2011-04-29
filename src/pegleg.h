@@ -8,7 +8,7 @@
 #define ONCREATE 5
 #define TIMER 6
 #define HOTKEY 7
-#define MAX_EVENTS 40
+#define MAX_EVENTS 32
 
 #define RELOADLUA 0xAAA
 

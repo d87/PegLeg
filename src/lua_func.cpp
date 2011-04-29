@@ -8,6 +8,7 @@ int CreateLua() {
 	luaL_openlibs(L);
 
 	lua_register(L, "RegisterEvent", l_RegisterEvent);
+	lua_register(L, "UnregisterEvent", l_UnregisterEvent);
 	lua_register(L, "AddScript", l_AddScript);
 	lua_register(L, "Shell", l_shell);
 	lua_register(L, "sh", l_shell);
@@ -24,8 +25,6 @@ int CreateLua() {
 	lua_register(L, "CreateTimer", l_CreateTimer);
 	lua_register(L, "KillTimer", l_KillTimer);
 	lua_register(L, "Reload", l_Reload);
-	lua_register(L, "ShowHUDCP", l_ShowHUDCP);
-	lua_register(L, "HideHUDCP", l_HideHUDCP);
 	
 	lua_newtable(L);
 	lua_setglobal(L, "console");
@@ -119,8 +118,8 @@ int luaB_print (lua_State *L) {
 static int l_RegisterEvent(lua_State *L) {
 	const char * eventname = luaL_checkstring(L, 1);
 	luaL_checktype(L, 2, LUA_TFUNCTION);
-	int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-	int trig = -1;
+	unsigned int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+	unsigned int trig = 999;
 	if		(!strcmp(_strupr((char*)eventname),"MOUSEDOWN")) trig = MDOWN;
 	else if (!strcmp(_strupr((char*)eventname),"MOUSEUP")) trig = MUP;
 	else if (!strcmp(_strupr((char*)eventname),"KEYDOWN")) trig = KDOWN;
@@ -130,10 +129,30 @@ static int l_RegisterEvent(lua_State *L) {
 	//else if (!strcmp(_strupr((char*)eventname),"ONUPDATE")) trig = ONUPDATE;
 	
 
-	if (trig != -1) {
-		int i=0;
+	int i=0;
+	if (trig != 999) {
 		for (; events[trig][i]; i++ );
 		if ( i < MAX_EVENTS ) events[trig][i] = func_ref;
+		lua_pushnumber(L, (trig << 5)+i );
+		return 1;
+	}
+	return 0;
+}
+static int l_UnregisterEvent(lua_State *L) {
+	//if (!lua_isnumber(L, 1))
+	//		error(L, "Invalid arg#1 (expecting number)");
+	unsigned int eventID = (int)luaL_checknumber(L, 1);
+	unsigned int eventType = eventID >> 5;
+	unsigned int eventIndex = eventID - (eventType << 5);
+
+	events[eventType][eventIndex] = 0;
+	for (int i = eventIndex+1; i < MAX_EVENTS; i++){
+		if (events[eventType][i])
+			events[eventType][i-1] = events[eventType][i];
+		else{
+			events[eventType][i-1] = 0;
+			break;
+		}
 	}
 
 	return 0;
@@ -393,14 +412,4 @@ int l_KillTimer( lua_State *L ) {
 		}
 	lua_pushnil(L);
 	return 1;
-}
-
-int l_ShowHUDCP( lua_State *L ) {
-	PhotoshopShowHUDCP();
-	return 0;
-}
-
-int l_HideHUDCP( lua_State *L ) {
-	PhotoshopShowHUDCP();
-	return 0;
 }

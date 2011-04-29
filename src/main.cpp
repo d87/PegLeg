@@ -5,9 +5,9 @@
 #include <process.h>
 
 extern "C" {
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#include "lua/src/lua.h"
+#include "lua/src/lualib.h"
+#include "lua/src/lauxlib.h"
 }
 
 #include "pegleg.h"
@@ -118,8 +118,10 @@ void error (lua_State *L, const char *fmt, ...) {
 	va_list argp;
 	va_start(argp, fmt);
 	
-	if (gui->hwndConsole)
+	if (gui->hwndConsole){
 		gui_printf(fmt, argp);
+		gui_printf("\n",0);
+	}
 	else {
 		FILE *f = fopen("error.log","a");
 		vfprintf(f, fmt, argp);

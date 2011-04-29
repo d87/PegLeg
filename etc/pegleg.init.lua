@@ -12,39 +12,42 @@ Start ("cmdline" [,"workingdir"]) - start new process
 timerID = CreateTimer(interval, callback) - Create new timer. Timers repeatedly execute callback function after a specified interval, in milliseconds.
 KillTimer(timerID)
 activeWindowTitle = GetWindowTitle()
-activeWindowProcessName = GetWindowProcess()  - Note that if you're running 32bit pegleg on 64bit version of windows, you can't retreive 64bit process names.
+activeWindowProcessName = GetWindowProcess()
 x,y = GetCursorPos()
 
 Reload() - reload configuration files
 Shutdown() - exit programm
 
-AddScript(filename) - Load lua script
+AddScript(filename) - Execute Lua script
 
 RegisterHotKey("modifiers","key",callback)
     modifiers:
         list of separated modifiers. Example: "SHIFT-CTRL-ALT"
 
-RegisterEvent(event, callback)
+        
+UnregisterEvent(eventID)
+eventID = RegisterEvent(event, callback)
     events:
         KeyDown
         KeyUp
         OnCreate
-    
+        
     if callback function returns true then keypress isn't passed for further processing.
+    
 
 MouseInput("type", x, y, absolute) - Emulate mouse input. absolute parameter used only for MOVE event
     type:
-        "MOVE"
-        "LEFTUP"
-        "LEFTDOWN"
-        "RIGHTUP"
-        "RIGHTDOWN"
-        "MIDDLEDOWN"
-        "MIDDLEUP"
+        MOVE
+        LEFTUP
+        LEFTDOWN
+        RIGHTUP
+        RIGHTDOWN
+        MIDDLEDOWN
+        MIDDLEUP
     x:
-        screen X-coordinate if absolute is true or pixels relative to current position
+        Screen X-coordinate, if absolute is true, or pixels relative to current position.
     y:
-        screen Y-coordinate if absolute is true or pixels relative to current position
+        Screen Y-coordinate, if absolute is true, or pixels relative to current position.
         
 KeyboardInput( input ) - Emulate keyboard input
     input:
@@ -57,15 +60,14 @@ KeyboardInput( input ) - Emulate keyboard input
         KeyboardInput(">(CTRL)C<(CTRL)") means down Ctrl, press C, release Ctrl
 ]]
 
-MOD = {
-["LALT"] = false,
-["LCTRL"] = false,
-["LSHIFT"] = false,
-}
+--~ MOD = {
+--~ ["LALT"] = false,
+--~ ["LCTRL"] = false,
+--~ ["LSHIFT"] = false,
+--~ }
 
-timeout = {}
-
-console.SetBackgroundColor(0.8, 0.8, 0.8)
+console.SetBackgroundColor(0.6,0,0)
+console.SetColor(1,1,1)
 
 --~ RegisterEvent("OnCreate",function()
 --~     print "PegLeg started."
@@ -91,4 +93,3 @@ function log(msg)
 end
 
 AddScript("config.lua")
--- AddScript("xbmc_binds.lua")

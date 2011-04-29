@@ -2,9 +2,9 @@
 #define _luaf_included
 
 extern "C" {
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#include "lua/src/lua.h"
+#include "lua/src/lualib.h"
+#include "lua/src/lauxlib.h"
 }
 #include <windows.h>
 #include <psapi.h>
@@ -22,6 +22,7 @@ int ReloadLua();
 int LoadScript(lua_State *L, const char* filename);
 int luaB_print (lua_State *L);
 int l_RegisterEvent(lua_State *L);
+int l_UnregisterEvent(lua_State *L);
 int l_shell ( lua_State *luaVM );
 int l_Start ( lua_State *luaVM );
 int l_Shutdown ( lua_State *luaVM );
