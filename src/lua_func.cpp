@@ -25,6 +25,11 @@ int CreateLua() {
 	lua_register(L, "CreateTimer", l_CreateTimer);
 	lua_register(L, "KillTimer", l_KillTimer);
 	lua_register(L, "Reload", l_Reload);
+	lua_register(L, "SetAlwaysOnTop", l_SetAlwaysOnTop);
+	lua_register(L, "IsAlwaysOnTop", l_IsAlwaysOnTop);
+	lua_register(L, "EnableMouseHooks", l_EnableMouseHooks);
+	lua_register(L, "DisableMouseHooks", l_DisableMouseHooks);
+	lua_register(L, "OSDTextLong", l_OSDTextLong);
 	
 	lua_newtable(L);
 	lua_setglobal(L, "console");
@@ -208,6 +213,24 @@ static int l_GetWindowTitle( lua_State *luaVM ) {
 	return 1;
 }
 
+static int l_IsAlwaysOnTop( lua_State *luaVM ) {
+	HWND fgw = GetForegroundWindow();
+	DWORD dwExStyle = (DWORD)GetWindowLong(fgw,GWL_EXSTYLE);
+	lua_pushboolean(luaVM, ((dwExStyle & WS_EX_TOPMOST)!=0) );
+	return 1;
+}
+static int l_SetAlwaysOnTop( lua_State *luaVM ) {
+	int ontop = 1;
+	if (lua_isboolean(luaVM,1))
+		if (lua_toboolean(luaVM,1) == 0)
+			ontop = 0;
+
+	HWND fgw = GetForegroundWindow();
+	SetWindowPos(fgw,ontop ? HWND_TOPMOST : HWND_NOTOPMOST, 0,0,0,0, SWP_NOMOVE|SWP_NOSIZE);
+	return 0;
+}
+
+
 static int l_AddScript( lua_State *luaVM ) {
 	const char * filename = luaL_checkstring(luaVM, 1);
 	LoadScript(luaVM, filename);
@@ -308,7 +331,7 @@ int __stdcall EWProc(HWND hwnd,LPARAM lParam)
 	}
 	return 1;
 }
-int l_ShowWindow( lua_State *L ) {
+static int l_ShowWindow( lua_State *L ) {
 	const char *title = luaL_checkstring(L, 1);
 	struct enum_struct wData;
 	ZeroMemory(&wData,sizeof(wData));
@@ -356,7 +379,7 @@ int l_RegisterHotKey( lua_State *L ) {
 	return 0;
 }
 
-int l_GetWindowProcess( lua_State *L ) {
+static int l_GetWindowProcess( lua_State *L ) {
 	unsigned long pid;
 	GetWindowThreadProcessId(GetForegroundWindow(), &pid);
 
@@ -382,7 +405,7 @@ int l_GetWindowProcess( lua_State *L ) {
 	return 0;
 }
 
-int l_CreateTimer( lua_State *L ) {
+static int l_CreateTimer( lua_State *L ) {
 	unsigned int interval = (unsigned int)luaL_checknumber(L, 1);
 	luaL_checktype(L, 2, LUA_TFUNCTION);
 	int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -398,7 +421,7 @@ int l_CreateTimer( lua_State *L ) {
 	return 1;
 }
 
-int l_KillTimer( lua_State *L ) {
+static int l_KillTimer( lua_State *L ) {
 	int tID = (int)luaL_checknumber(L, 1);
 	int i = 0;
 	for (; timerMap[i]; i++)
@@ -411,5 +434,50 @@ int l_KillTimer( lua_State *L ) {
 			return 1;
 		}
 	lua_pushnil(L);
+	return 1;
+}
+
+static int l_EnableMouseHooks( lua_State *luaVM ) {
+	int enable = 1;
+	if (lua_isboolean(luaVM,1)){
+		if (lua_toboolean(luaVM,1) == 0)
+			enable = 0;
+	}
+
+	EnableMouseHooks(enable);
+	return 0;
+}
+static int l_DisableMouseHooks( lua_State *luaVM ) {
+	EnableMouseHooks(0);
+	return 0;
+}
+
+static int l_OSDTextLong ( lua_State *L ) {
+	const char* text = luaL_checkstring(L, 1);
+	const int _x = luaL_checkinteger(L, 2);
+	const int _y = luaL_checkinteger(L, 3);
+	double r = ( lua_isnumber(L, 4) ? lua_tonumber(L, 4) : 1 );
+	double g = ( lua_isnumber(L, 5) ? lua_tonumber(L, 5) : 1 );
+	double b = ( lua_isnumber(L, 6) ? lua_tonumber(L, 6) : 1 );
+	const char* font = ( lua_isstring(L, 7) ? lua_tostring(L, 7) : "Trebuchet MS" );
+	int size = ( lua_isnumber(L, 8) ? lua_tointeger(L, 8) : 25 );
+
+	COLORREF color;
+	HDC R;
+
+	if (r>1) r = 1; if (r<0) r = 0;
+	if (g>1) g = 1; if (g<0) g = 0;
+	if (b>1) b = 1; if (b<0) b = 0;
+
+	color = RGB(r*255,g*255,b*255);
+	HWND Desktop = GetDesktopWindow();
+	R = GetWindowDC(GetDesktopWindow());
+	SetBkMode(R,OPAQUE);//TRANSPARENT);
+	SetBkColor(R,RGB(0,0,0));
+	SetTextColor(R,color);
+	SelectObject(R, CreateFont(size,0,0,0,0,0,0,0,1,0,0,0,0,font) );
+	TextOutA(R,_x,_y,text,strlen(text));
+	ReleaseDC(0,R);
+	lua_pushnumber ( L, 1);
 	return 1;
 }

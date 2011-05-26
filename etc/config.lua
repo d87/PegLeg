@@ -8,19 +8,35 @@ end)
 local timeout = {}
 timeout["ALTS"] = os.time()
 RegisterHotKey("ALT","S",function ()
-    if GetWindowTitle() == "Starcraft 2" then return end
+    if GetWindowTitle() == "World of Warcraft" then return end
     timeout["ALTS"] = os.time()+3
 end)
 
 local photoshop_hooks_enabled = false
-local ps_opacity = 70
+local t_ps_opacity = { 97 }
+local t_ps_flow = { 97 }
+local ps_hudcp_clickblock_event
+local ps_hudcp_clickblock_func = function(btn)
+    if btn == 1 then return true end
+end
 local ps_hudcp_onkeyup_event
 local ps_hudcp_onkeyup_func = function(key)
     if key == "F1" then
+        UnregisterEvent(ps_hudcp_clickblock_event)
+        DisableMouseHooks()
         MouseInput("RIGHTUP")
         KeyboardInput("<(ALT)<(SHIFT)")
         UnregisterEvent(ps_hudcp_onkeyup_event)
         ps_hudcp_onkeyup_event = nil
+    end
+end
+local ps_brushsize_onkeyup_event
+local ps_brushsize_onkeyup_func = function(key)
+    if key == "F8" then
+        MouseInput("RIGHTUP")
+        KeyboardInput("<(ALT)")
+        UnregisterEvent(ps_brushsize_onkeyup_event)
+        ps_brushsize_onkeyup_event = nil
     end
 end
 local function photoshop_hooks(key)
@@ -39,23 +55,81 @@ local function photoshop_hooks(key)
     end
     
     if key == "F2" then
-            if ps_opacity > 3 then ps_opacity = ps_opacity - 3 end
-            string.format("%02d",ps_opacity):gsub(".", KeyboardInput)
+            local isFlow = IsPressed("SHIFT")
+            local param = isFlow and t_ps_flow or t_ps_opacity
+            if param[1] > 3 then param[1] = param[1] - 3 end
+            local vStr = string.format("%02d",param[1])
+            vStr:gsub(".", KeyboardInput);
+            local fmt = isFlow and "Flow: %s       " or "Opacity: %s  "
+            OSDTextLong(string.format(fmt,vStr), 800,0)
     end
     
     if key == "F3" then
-            if ps_opacity <= 97 then ps_opacity = ps_opacity + 3 end
-            string.format("%02d",ps_opacity):gsub(".", KeyboardInput)
+            local isFlow = IsPressed("SHIFT")
+            local param = isFlow and t_ps_flow or t_ps_opacity
+            if param[1] <= 97 then param[1] = param[1] + 3 end
+            local vStr = string.format("%02d",param[1])
+            vStr:gsub(".", KeyboardInput);
+            local fmt = isFlow and "Flow: %s       " or "Opacity: %s  "
+            OSDTextLong(string.format(fmt,vStr), 800,0)
+            --if ps_opacity <= 97 then ps_opacity = ps_opacity + 3 end
+            --KeyboardInput(">(SHIFT)");
+            --string.format("%02d",ps_opacity):gsub(".", KeyboardInput);
+            --KeyboardInput("<(SHIFT)");
     end
     if key == "F1" then
         -- HUD Color picker toggle
         if ps_hudcp_onkeyup_event then return end
         KeyboardInput(">(SHIFT)>(ALT)");
         MouseInput("RIGHTDOWN");
+        --This mouse block disables left click while we're holding color picker key.
+        --Because Photoshop is switching to color sampler tool if you accidently left-click, and this happens quite often with a tablet.
+        --Actually if we click color picker will disappear, seems it's using low level input polling or something.
+        --But anyway it still serves the purpose of protecting from color sampler
+        EnableMouseHooks()
+        ps_hudcp_clickblock_event = RegisterEvent("MouseDown",ps_hudcp_clickblock_func);
+        
         ps_hudcp_onkeyup_event = RegisterEvent("KeyUp",ps_hudcp_onkeyup_func)
         return true -- eat keypress
     end
+    --if key == "F8" then
+    --    -- ALT+RMB Brush size tool
+    --    if ps_brushsize_onkeyup_event then return end
+    --    KeyboardInput(">(ALT)");
+    --    MouseInput("RIGHTDOWN");
+    --    ps_brushsize_onkeyup_event = RegisterEvent("KeyUp",ps_brushsize_onkeyup_func)
+    --    return true -- eat keypress
+    --end
 end
+
+local painter_opacity = 10
+local painter_hudcp_onkeyup_event
+local painter_hudcp_onkeyup_func = function(key)
+    if key == "F1" then
+        UnregisterEvent(painter_hudcp_onkeyup_event)
+        KeyboardInput(">(CTRL)>(ALT)1<(ALT)<(CTRL)");
+        painter_hudcp_onkeyup_event = nil
+    end
+end
+local function painter_hooks(key)
+    --Toggle Temportal Color Palette (Painter 12)
+    if key == "F1" then
+        if painter_hudcp_onkeyup_event then return true end
+        painter_hudcp_onkeyup_event = RegisterEvent("KeyUp",painter_hudcp_onkeyup_func)
+        KeyboardInput(">(CTRL)>(ALT)1<(ALT)<(CTRL)");
+        return true
+    end    
+    if key == "F2" then
+            if painter_opacity > 1 then painter_opacity = painter_opacity - 1 end
+            --string.format("%02d",math.fmod(painter_opacity,10)):gsub(".", KeyboardInput);
+            KeyboardInput(string.format("%d",math.fmod(painter_opacity,10)))
+    end
+    if key == "F3" then
+            if painter_opacity < 10 then painter_opacity = painter_opacity + 1 end
+            KeyboardInput(string.format("%d",math.fmod(painter_opacity,10)))
+    end
+end
+
 
 local actions = {
     ['3'] = function() sh[[start D:\]] end,
@@ -70,12 +144,10 @@ local actions = {
     ['E'] = function() Start[[H:\soft\putty.exe -load "nevihta"]] end,
     ['R'] = function() Start[[H:\soft\putty.exe -load "nevihta_auth"]] end,
     ['F12'] = function()
-        photoshop_hooks_enabled = not photoshop_hooks_enabled 
+        photoshop_hooks_enabled = not photoshop_hooks_enabled  -- also toggles painter functions
     end,
     ['F9'] = Reload,
-    ['F10'] = Shutdown,
---~     ['F11'] = console.Hide,
-    ['F11'] = console.Show,
+    ['F10'] = function() SetAlwaysOnTop(not IsAlwaysOnTop()) end,
 }
 RegisterEvent("KeyDown",function (key,vk,scan)
     if timeout["ALTS"] and os.time() < timeout["ALTS"] then
@@ -87,8 +159,12 @@ RegisterEvent("KeyDown",function (key,vk,scan)
     end
     
     if photoshop_hooks_enabled then
-        if GetWindowProcess() == "Photoshop.exe" then
+        local procname = GetWindowProcess()
+        if procname == "Photoshop.exe" then
             return photoshop_hooks(key)
+        end
+        if procname == "Painter 12 x64.exe" then
+            return painter_hooks(key)
         end
     end
 end)

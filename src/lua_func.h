@@ -43,8 +43,11 @@ int l_RegisterHotKey( lua_State *L );
 int l_CreateTimer( lua_State *L );
 int l_KillTimer( lua_State *L );
 int l_Reload( lua_State *L );
+int l_SetAlwaysOnTop( lua_State *luaVM );
+int l_IsAlwaysOnTop( lua_State *luaVM );
+int l_EnableMouseHooks( lua_State *luaVM );
+int l_DisableMouseHooks( lua_State *luaVM );
+int l_OSDTextLong ( lua_State *L );
 
-int l_ShowHUDCP( lua_State *L );
-int l_HideHUDCP( lua_State *L );
 
 #endif

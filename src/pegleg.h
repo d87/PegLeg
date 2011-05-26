@@ -30,7 +30,11 @@ struct event_arglist {
 extern int events[8][MAX_EVENTS];
 extern int timerMap[MAX_EVENTS];
 extern int mainThreadId;
+extern HHOOK hhkLowLevelKeyboard;
+extern HHOOK hhkLowLevelMouse;
+void EnableMouseHooks(bool enable);
 void error (lua_State *L, const char *fmt, ...);
 int Shutdown();
 int FireEvent(lua_State *L, int index, char * VK_NAME, int vkCode, int scanCode);
+int FireMouseEvent(lua_State *L, int index, int Button, int x, int y);
 static int l_RegisterEvent(lua_State *L);
