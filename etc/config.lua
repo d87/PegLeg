@@ -8,7 +8,7 @@ end)
 local timeout = {}
 timeout["ALTS"] = os.time()
 RegisterHotKey("ALT","S",function ()
-    if GetWindowTitle() == "World of Warcraft" then return end
+    if GetWindowTitle() == "Starcraft 2" then return end
     timeout["ALTS"] = os.time()+3
 end)
 

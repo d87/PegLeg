@@ -30,6 +30,8 @@ eventID = RegisterEvent(event, callback)
     events:
         KeyDown
         KeyUp
+        MouseDown
+        MouseUp
         OnCreate
         
     if callback function returns true then keypress isn't passed for further processing.
@@ -58,12 +60,24 @@ KeyboardInput( input ) - Emulate keyboard input
         (KEYNAME) - for other keys (full list in pegleg.conf.lua)
     Example:
         KeyboardInput(">(CTRL)C<(CTRL)") means down Ctrl, press C, release Ctrl
+        
+SetAlwaysOnTop( state )
+    state:
+        boolean - enable/disable always on top mode for current window
+IsAlwaysOnTop()
+    returns true if always on top flag is set for current window
+    
+EnableMouseHooks( state )
+    state:
+        boolean - enable/disable mouse hooks. if ommited defaults to true
+DisableMouseHooks() - disable mouse hooks
+    
 ]]
 
 --~ MOD = {
---~ ["LALT"] = false,
---~ ["LCTRL"] = false,
---~ ["LSHIFT"] = false,
+--~     ["LALT"] = false,
+--~     ["LCTRL"] = false,
+--~     ["LSHIFT"] = false,
 --~ }
 
 console.SetBackgroundColor(0.6,0,0)
@@ -81,15 +95,15 @@ console.SetColor(1,1,1)
 --~     log(string.format("%d KDOWN: %s",os.time(),key))
 --~ end)
 --~ RegisterEvent("KeyUp",function(key)
---~     if key == "LSHIFT" or key == "LALT" or key == "LCTRL" then
+--~     if MOD[key] ~= nil then
 --~         MOD[key] = false
 --~     end
 --~ end)
 
-function log(msg)
-    io.output(io.open("log.log","a"))
-    io.write(msg)
-    io.close()
-end
+--~ function log(msg)
+--~     io.output(io.open("log.log","a"))
+--~     io.write(msg)
+--~     io.close()
+--~ end
 
 AddScript("config.lua")
