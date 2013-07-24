@@ -8,6 +8,10 @@
 #define ONCREATE 5
 #define TIMER 6
 #define HOTKEY 7
+#define ACTIVATION 8
+#define JOYUPDATE 9
+#define JOYBUTTONDOWN 10
+#define JOYBUTTONUP 11
 #define MAX_EVENTS 32
 
 #define RELOADLUA 0xAAA
@@ -27,11 +31,12 @@ struct event_arglist {
 	int scanCode;
 };
 
-extern int events[8][MAX_EVENTS];
+extern int events[12][MAX_EVENTS];
 extern int timerMap[MAX_EVENTS];
 extern int mainThreadId;
 extern HHOOK hhkLowLevelKeyboard;
 extern HHOOK hhkLowLevelMouse;
+extern JOYINFOEX g_joyInfo;
 void EnableMouseHooks(bool enable);
 void error (lua_State *L, const char *fmt, ...);
 int Shutdown();

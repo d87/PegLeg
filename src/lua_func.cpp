@@ -1,7 +1,27 @@
 #include "lua_func.h"
 #include "pegleg.h"
 
+#include <cstdlib>
+#include <string>
+#include <hash_map>
+using namespace std;
+
+struct PLTIMER {
+	int interval;
+	int remains;
+	unsigned int luaFuncRef;
+};
+
+hash_map<std::string, PLTIMER> Timers;
+
 lua_State *L = 0;
+
+static const struct luaL_reg timerlib [] = {
+	//{"new", l_CreateNewUserdata},
+	{"Kill", l_KillFrame},
+	{"GetID", l_Frame_GetData},
+	{NULL, NULL}
+};
 
 int CreateLua() {
 	L = luaL_newstate(); 
@@ -24,12 +44,18 @@ int CreateLua() {
 	lua_register(L, "GetWindowProcess", l_GetWindowProcess);
 	lua_register(L, "CreateTimer", l_CreateTimer);
 	lua_register(L, "KillTimer", l_KillTimer);
+	lua_register(L, "SetKeyDelay", l_SetKeyDelay);
+	lua_register(L, "TurnOffMonitor", l_TurnOffMonitor);
 	lua_register(L, "Reload", l_Reload);
 	lua_register(L, "SetAlwaysOnTop", l_SetAlwaysOnTop);
 	lua_register(L, "IsAlwaysOnTop", l_IsAlwaysOnTop);
 	lua_register(L, "EnableMouseHooks", l_EnableMouseHooks);
 	lua_register(L, "DisableMouseHooks", l_DisableMouseHooks);
 	lua_register(L, "OSDTextLong", l_OSDTextLong);
+	lua_register(L, "GetJoyPosInfo", l_GetJoyPosInfo);
+	lua_register(L, "IsJoyButtonPressed", l_IsJoyButtonPressed);
+
+	lua_register(L, "CreateFrame", l_CreateFrame);
 	
 	lua_newtable(L);
 	lua_setglobal(L, "console");
@@ -57,8 +83,11 @@ int CreateLua() {
 
 int InitLua() {
 
-	if (gui->hwndConsole)
+	if (gui.hwndConsole)
 		lua_register(L, "print", luaB_print);
+
+	luaL_newmetatable(L, "PegLeg.timer");
+	luaL_openlib(L, "timer", timerlib, 0);
 
 	LoadScript(L, "pegleg.init.lua");
 
@@ -79,10 +108,11 @@ int ReloadLua() {
 	//killing timers and hotkeys
 	for (int i=0; events[HOTKEY][i]; i++)
 		UnregisterHotKey(NULL, i);
-	for (int i=0; events[TIMER][i]; i++){
+	Timers.clear();
+	/*for (int i=0; events[TIMER][i]; i++){
 		KillTimer(NULL, timerMap[i]);
 		timerMap[i] = 0;
-	}
+	}*/
 	ZeroMemory( &events, sizeof(events) ); // purging old events table
 
 	lua_close(L);
@@ -131,6 +161,10 @@ static int l_RegisterEvent(lua_State *L) {
 	else if (!strcmp(_strupr((char*)eventname),"KEYUP")) trig = KUP;
 	else if (!strcmp(_strupr((char*)eventname),"MOUSEMOVE")) trig = MMOVE;
 	else if (!strcmp(_strupr((char*)eventname),"ONCREATE")) trig = ONCREATE;
+	else if (!strcmp(_strupr((char*)eventname),"ACTIVATION")) trig = ACTIVATION;
+	else if (!strcmp(_strupr((char*)eventname),"JOYUPDATE")) trig = JOYUPDATE;
+	else if (!strcmp(_strupr((char*)eventname),"JOYBUTTONDOWN")) trig = JOYBUTTONDOWN;
+	else if (!strcmp(_strupr((char*)eventname),"JOYBUTTONUP")) trig = JOYBUTTONUP;
 	//else if (!strcmp(_strupr((char*)eventname),"ONUPDATE")) trig = ONUPDATE;
 	
 
@@ -239,18 +273,18 @@ static int l_AddScript( lua_State *luaVM ) {
 }
 
 static int l_ShowConsole( lua_State *luaVM ) {
-	if (gui->hwnd) {
-		ShowWindow(gui->hwnd,SW_SHOW);
-		//SetForegroundWindow(gui->hwnd);
+	if (gui.hwnd) {
+		ShowWindow(gui.hwnd,SW_SHOW);
+		//SetForegroundWindow(gui.hwnd);
 	}
 	return 0;
 }
 static int l_HideConsole( lua_State *luaVM ) {
-	if (gui->hwnd) ShowWindow(gui->hwnd,SW_HIDE);
+	if (gui.hwnd) ShowWindow(gui.hwnd,SW_HIDE);
 	return 0;
 }
 static int l_ClearConsole( lua_State *luaVM ) {
-	SendMessage(gui->hwndConsole,WM_SETTEXT,0,0);
+	SendMessage(gui.hwndConsole,WM_SETTEXT,0,0);
 	return 0;
 }
 static int l_SetConsoleBackgroundColor( lua_State *L ) {
@@ -261,7 +295,7 @@ static int l_SetConsoleBackgroundColor( lua_State *L ) {
 	if (g>1) g = 1; if (g<0) g = 0;
 	if (b>1) b = 1; if (b<0) b = 0;
 	COLORREF clr = RGB(r*255,g*255,b*255);
-	SendMessage(gui->hwndConsole, EM_SETBKGNDCOLOR, 0, (LPARAM)clr);
+	SendMessage(gui.hwndConsole, EM_SETBKGNDCOLOR, 0, (LPARAM)clr);
 	return 0;
 }
 
@@ -272,9 +306,9 @@ static int l_SetConsoleTextColor( lua_State *L ) {
 	if (r>1) r = 1; if (r<0) r = 0;
 	if (g>1) g = 1; if (g<0) g = 0;
 	if (b>1) b = 1; if (b<0) b = 0;
-	gui->text_r = (int)r*255;
-	gui->text_g = (int)g*255;
-	gui->text_b = (int)b*255;
+	gui.text_r = (int)r*255;
+	gui.text_g = (int)g*255;
+	gui.text_b = (int)b*255;
 	return 0;
 }
 
@@ -405,35 +439,123 @@ static int l_GetWindowProcess( lua_State *L ) {
 	return 0;
 }
 
-static int l_CreateTimer( lua_State *L ) {
-	unsigned int interval = (unsigned int)luaL_checknumber(L, 1);
-	luaL_checktype(L, 2, LUA_TFUNCTION);
-	int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+/*void CALLBACK TimerProc(HWND hWnd, UINT uMsg, UINT tID, DWORD dwTime){
+		//int tID = (int)msg.wParam;
+				int i = 1;
+				//char str[255];
+				//sprintf(str, "proc>>> %i, %i", tID, i);
+				//guiAddText(str);
+				for (; timerMap[i]; i++)
+					if (timerMap[i] == tID) {
+						FireEvent(L, events[TIMER][i], 0, 0, 0);
+						break;
+					}
+}
+*/
 
-	int i=0;
+void ProcTimers(int elapsed){
+	for (auto it=Timers.begin(); it!=Timers.end(); it++){
+		it->second.remains -= elapsed;
+		if (it->second.remains <= 0){
+			FireEvent(L, it->second.luaFuncRef, 0, 0, 0);
+			it->second.remains += it->second.interval;
+		}
+	}
+}
+
+static int l_CreateTimer( lua_State *L ) {
+	/*unsigned int i;
+	if (lua_isnumber(L, 1))
+		i = (unsigned int)lua_tonumber(L, 1);
+	else
+		for (i=1; events[TIMER][i]; i++ );*/
+	std::string name = (const char*) luaL_checkstring(L, 1);
+
+	unsigned int interval = (unsigned int)luaL_checknumber(L, 2);
+	luaL_checktype(L, 3, LUA_TFUNCTION);
+	//lua_pushvalue(L, 2);
+	unsigned int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	if (Timers.find(name) != Timers.end()){
+		PLTIMER * t = &Timers[name];
+		t->interval = interval;
+		t->remains = interval;
+		luaL_unref(L, LUA_REGISTRYINDEX, t->luaFuncRef);
+		t->luaFuncRef = func_ref;
+	}else{
+		PLTIMER t;
+		t.interval = interval;
+		t.remains = interval;
+		t.luaFuncRef = func_ref;
+
+		Timers[name] = t;
+	}
+	
+	/*if ( i < MAX_EVENTS ) events[TIMER][i] = func_ref;
+	else return 0;
+
+	HWND hWnd = gui.hwnd;
+
+	unsigned int tID = SetTimer(hWnd,i,interval, (TIMERPROC)&TimerProc);
+	timerMap[i] = tID;
+	lua_pushnumber(L, tID);*/
+	return 0;
+}
+
+static PLFrame *checkuserdata (lua_State *L, int idx) {
+	void *ud = luaL_checkudata(L, idx, "PegLeg.timer");
+	luaL_argcheck(L, ud != NULL, idx, "`timer' expected");
+	return (PLFrame *)ud;
+}
+static int l_CreateFrame( lua_State *L ) {
+	unsigned int interval = (unsigned int)luaL_checknumber(L, 1);
+	unsigned int data = (unsigned int)luaL_checknumber(L, 1);
+	//luaL_checktype(L, 2, LUA_TFUNCTION);
+	//int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	/*int i=0;
 	for (; events[TIMER][i]; i++ );
 	if ( i < MAX_EVENTS ) events[TIMER][i] = func_ref;
 	else return 0;
 
 	int tID = SetTimer(NULL,i,interval,NULL);
-	timerMap[i] = tID;
-	lua_pushnumber(L, tID);
+	timerMap[i] = tID;*/
+	PLFrame *timer = (PLFrame *)lua_newuserdata(L, sizeof(PLFrame));
+
+	luaL_getmetatable(L, "PegLeg.timer");
+	lua_setmetatable(L, -2);
+	timer->data = data;
+	timer->invterval = interval;
 	return 1;
 }
 
+static int l_Frame_GetData( lua_State *L ) {
+	PLFrame *t = checkuserdata(L,1);
+	lua_pushnumber(L, t->invterval);
+	return 1;
+}
+
+static int l_KillFrame( lua_State *L ) {
+
+	return 0;
+}
+
 static int l_KillTimer( lua_State *L ) {
-	int tID = (int)luaL_checknumber(L, 1);
-	int i = 0;
+	std::string name = (const char*) luaL_checkstring(L, 1);
+	int nRemoved = Timers.erase(name);
+	/*int tID = (int)luaL_checknumber(L, 1);
+	int i = 1;
+	HWND hWnd = gui.hwnd;
 	for (; timerMap[i]; i++)
 		if (timerMap[i] == tID) {
-			KillTimer(NULL, tID);
+			KillTimer(hWnd, tID);
 			luaL_unref(L, LUA_REGISTRYINDEX,events[TIMER][i]);
 			events[TIMER][i] = 0;
 			timerMap[i] = 0;
 			lua_pushboolean(L, 1);
 			return 1;
-		}
-	lua_pushnil(L);
+		}*/
+	lua_pushnumber(L, nRemoved);
 	return 1;
 }
 
@@ -479,5 +601,56 @@ static int l_OSDTextLong ( lua_State *L ) {
 	TextOutA(R,_x,_y,text,strlen(text));
 	ReleaseDC(0,R);
 	lua_pushnumber ( L, 1);
+	return 1;
+}
+
+
+static int l_SetKeyDelay ( lua_State *L ) {
+	const int delay = luaL_checkinteger(L, 1);
+	const int repeat = luaL_checkinteger(L, 2);
+	FILTERKEYS keys;
+	keys.cbSize = sizeof(FILTERKEYS);
+	keys.iDelayMSec = delay;
+	keys.iRepeatMSec = repeat;
+	keys.dwFlags = FKF_FILTERKEYSON|FKF_AVAILABLE;
+	if (SystemParametersInfo (SPI_SETFILTERKEYS, 0, (LPVOID) &keys, 0)) {
+		lua_pushboolean(L, 1);
+		return 1;
+	}
+	return 0;
+}
+
+static int l_TurnOffMonitor( lua_State *L ) {
+	SendMessage(HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM) 2);
+	return 0;
+}
+
+static int l_GetJoyPosInfo ( lua_State *L ) {
+	//const int joyID = luaL_checkinteger(L, 1);
+	// POV, X, Y, Z, R, U
+	DWORD POV = g_joyInfo.dwPOV;
+	if (POV == -2) return 0; //joystick polling error occured
+
+	if (POV  == JOY_POVCENTERED) lua_pushstring ( L, "CENTERED");
+	else if (POV  == JOY_POVBACKWARD) lua_pushstring ( L, "DOWN");
+	else if (POV  == JOY_POVFORWARD) lua_pushstring ( L, "UP");
+	else if (POV  == JOY_POVLEFT) lua_pushstring ( L, "LEFT");
+	else if (POV  == JOY_POVRIGHT) lua_pushstring ( L, "RIGHT");
+
+	lua_pushnumber ( L, g_joyInfo.dwXpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo.dwYpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo.dwZpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo.dwRpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo.dwUpos*100/0xFFFF);
+
+	return 6;
+}
+
+static int l_IsJoyButtonPressed ( lua_State *L ) {
+	//const int joyID = luaL_checkinteger(L, 1);
+	const int buttonID = luaL_checkinteger(L, 1) - 1;
+
+	lua_pushboolean(L, (g_joyInfo.dwButtons >> buttonID) &1);
+
 	return 1;
 }

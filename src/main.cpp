@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <process.h>
+#include <time.h>
 
 extern "C" {
 #include "lua/src/lua.h"
@@ -16,13 +17,18 @@ extern "C" {
 #include <richedit.h>
 
 #pragma comment( lib, "lua5.1.lib" )
+#pragma comment( lib, "Winmm.lib" )
 
-int events[8][MAX_EVENTS];
+#define EXTRACTBIT(var, index) ((var >> index) & 1)
+
+int events[12][MAX_EVENTS];
 int timerMap[MAX_EVENTS];
 
 HINSTANCE g_hInstance;
 HHOOK hhkLowLevelKeyboard = 0;
 HHOOK hhkLowLevelMouse = 0;
+HHOOK hhkActivate = 0;
+JOYINFOEX g_joyInfo;
 
 int mainThreadId;
 
@@ -59,8 +65,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
   return(block ? 1 : CallNextHookEx(NULL, nCode, wParam,lParam));
 }
 
-LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM
-lParam)
+LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	int block = 0;
 	if (nCode == HC_ACTION) 
@@ -115,11 +120,23 @@ lParam)
 	return(block ? 1 : CallNextHookEx(NULL, nCode, wParam,lParam));
 }
 
+LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam){
+	/*if (...)
+		HWND hNewActiveWnd = (HWND)lParam;
+		char *Title = (char *)malloc(sizeof(char)*200);
+		GetWindowText(hNewActiveWnd,Title,200);
+		for (int i=0; events[ONCREATE][i] && i < MAX_EVENTS; i++ )
+			FireEvent(L,events[ONCREATE][i], Title, 0, 0);
+		free(Title);
+	}*/
+	return CallNextHookEx(NULL, nCode, wParam,lParam);
+}
+
 void error (lua_State *L, const char *fmt, ...) {
 	va_list argp;
 	va_start(argp, fmt);
 	
-	if (gui->hwndConsole){
+	if (gui.hwndConsole){
 		gui_printf(fmt, argp);
 		gui_printf("\n",0);
 	}
@@ -136,10 +153,10 @@ void error (lua_State *L, const char *fmt, ...) {
 int Shutdown() {
 	UnhookWindowsHookEx(hhkLowLevelKeyboard);
 	//UnhookWindowsHookEx(hhkLowLevelMouse);
-	if (gui->createtray)
-		KillTrayIcon(gui->hwnd);
-	if (gui->hwnd)
-		DestroyWindow  (gui->hwnd);
+	if (gui.createtray)
+		KillTrayIcon(gui.hwnd);
+	if (gui.hwnd)
+		DestroyWindow  (gui.hwnd);
 	exit(1);
 	return 1;
 }
@@ -154,6 +171,7 @@ int ExecuteCallback(int arg_num){
 	lua_pop(L, 1);
 	return isnil;
 }
+
 int FireEvent(lua_State *L, int index, char * VK_NAME, int vkCode, int scanCode) {
 	lua_rawgeti(L, LUA_REGISTRYINDEX, index);
 	if (VK_NAME) {
@@ -161,6 +179,9 @@ int FireEvent(lua_State *L, int index, char * VK_NAME, int vkCode, int scanCode)
 		lua_pushinteger(L, vkCode);
 		lua_pushinteger(L, scanCode);
 		return ExecuteCallback(3);
+	}else if (vkCode){ //for gamepad events
+		lua_pushinteger(L, vkCode);
+		return ExecuteCallback(1);
 	}
 	return ExecuteCallback(0);
 }
@@ -188,6 +209,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	mainThreadId = GetCurrentThreadId();
 	g_hInstance = hInstance;
 
+
 	L = luaL_newstate();
 	LoadScript(L, "pegleg.keys.lua");
 	lua_getglobal(L, "code_name");
@@ -199,61 +221,112 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		lua_pop(L, 1);
 	}
 	lua_close(L);
-
+	
 
 
 	CreateLua();
 
 	LoadScript(L, "pegleg.conf.lua");
 
-	gui = (gui_struct *)malloc(sizeof(gui_struct));
+	//gui = (gui_struct *)malloc(sizeof(gui_struct));
 
 	lua_getglobal(L, "console");
 	lua_getfield(L, -1, "enabled");
 	int CreateConsole = lua_toboolean(L, -1);
 	lua_pop(L,1);
 	lua_getfield(L, -1, "tray");
-	gui->createtray = lua_toboolean(L, -1);
+	gui.createtray = lua_toboolean(L, -1);
 	lua_pop(L,1);
 	lua_getfield(L, -1, "width");
-	gui->width = lua_tointeger(L, -1);
+	gui.width = lua_tointeger(L, -1);
 	lua_pop(L,1);
 	lua_getfield(L, -1, "height");
-	gui->height = lua_tointeger(L, -1);
+	gui.height = lua_tointeger(L, -1);
 	lua_pop(L,1);
 	
 
 
 
 	if (CreateConsole) {
-		gui->event_ready = CreateEvent(NULL, FALSE, FALSE, NULL);
+		gui.event_ready = CreateEvent(NULL, FALSE, FALSE, NULL);
 		_beginthread( guiThread, 0, (void *)hInstance );
-		WaitForSingleObject( gui->event_ready, 5000 );
+		WaitForSingleObject( gui.event_ready, 5000 );
 	}
 
 	hhkLowLevelKeyboard  = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInstance, 0);
 	//hhkLowLevelMouse  = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, hInstance, 0);
+	//hhkActivate =  SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)GetMsgProc, hInstance, 0);
 
 	InitLua();
-	
+
+	double pollingTimeout = 0.015;
+	double prevPollTime = 0;
+	double now = 0;
+	//JOYINFOEX joyInfo;
+	memset(&g_joyInfo, 0, sizeof(g_joyInfo));
+	g_joyInfo.dwSize = sizeof(g_joyInfo);
+	g_joyInfo.dwFlags = JOY_RETURNALL;
+	DWORD prevJoyButtonState = 0;
+	DWORD changedJoyButtons = 0;
+
 	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0) != 0) {
-		if (msg.message == WM_HOTKEY)
-			FireEvent(L, events[HOTKEY][(int)msg.wParam], 0, 0, 0);
-		else if (msg.message == WM_TIMER) {
-			int tID = (int)msg.wParam;
-			int i = 0;
-			for (; timerMap[i]; i++)
-				if (timerMap[i] == tID) {
-					FireEvent(L, events[TIMER][i], 0, 0, 0);
-					break;
+	while(1){
+		//while (GetMessage(&msg, NULL, 0, 0) != 0) {
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			if (msg.message == WM_HOTKEY)
+				FireEvent(L, events[HOTKEY][(int)msg.wParam], 0, 0, 0);
+			/*else if (msg.message == WM_TIMER) {
+				int tID = (int)msg.wParam;
+				int i = 0;
+				char str[255];
+				sprintf(str, ">>> %i, %i", tID, i);
+				guiAddText(str);
+				for (; timerMap[i]; i++)
+					if (timerMap[i] == tID) {
+						FireEvent(L, events[TIMER][i], 0, 0, 0);
+						break;
+					}
+			}*/
+			else if (msg.message == WM_COMMAND){
+				int cmdID = (int)msg.wParam;
+				if (cmdID == RELOADLUA)
+					ReloadLua();
+			}
+			//TranslateMessage(&msg);
+			//DispatchMessage(&msg);
+		}
+
+		now = (double)clock()/CLOCKS_PER_SEC;
+		if (now > prevPollTime + pollingTimeout){
+			prevPollTime = now;
+
+			ProcTimers( (int)(pollingTimeout*1000) );
+
+			if (joyGetPosEx(JOYSTICKID1, &g_joyInfo) == JOYERR_NOERROR) {
+				for (int i=0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++ )
+					FireEvent(L, events[JOYUPDATE][i], 0, 0, 0);
+
+				changedJoyButtons = prevJoyButtonState ^ g_joyInfo.dwButtons;
+				prevJoyButtonState = g_joyInfo.dwButtons;
+				if (changedJoyButtons){
+					for (int btn=0;btn<32; btn++){
+						if (EXTRACTBIT(changedJoyButtons, btn)){
+							if (EXTRACTBIT(prevJoyButtonState, btn)){ //dunno why it's inverted
+								for (int i=0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++ )
+									FireEvent(L, events[JOYBUTTONDOWN][i], 0, btn+1, 0);
+							}else{
+								for (int i=0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++ )
+									FireEvent(L, events[JOYBUTTONUP][i], 0, btn+1, 0);
+							}
+						}
+					}
 				}
+			}else{
+				g_joyInfo.dwPOV = -2;
+			}
 		}
-		else if (msg.message == WM_COMMAND){
-			int cmdID = (int)msg.wParam;
-			if (cmdID == RELOADLUA)
-				ReloadLua();
-		}
+
+		Sleep(1);
 	}
 
 	UnhookWindowsHookEx(hhkLowLevelKeyboard);

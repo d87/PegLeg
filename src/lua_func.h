@@ -16,6 +16,13 @@ extern "C" {
 
 extern lua_State *L;
 
+struct PLFrame {
+	int invterval;
+	int data;
+	//int interval;
+};
+
+void ProcTimers(int elapsed);
 int CreateLua();
 int InitLua();
 int ReloadLua();
@@ -48,6 +55,12 @@ int l_IsAlwaysOnTop( lua_State *luaVM );
 int l_EnableMouseHooks( lua_State *luaVM );
 int l_DisableMouseHooks( lua_State *luaVM );
 int l_OSDTextLong ( lua_State *L );
-
+int l_CreateFrame( lua_State *L);
+int l_KillFrame( lua_State *L);
+int l_Frame_GetData( lua_State *L);
+int l_SetKeyDelay( lua_State *L);
+int l_TurnOffMonitor( lua_State *L);
+int l_GetJoyPosInfo( lua_State *L);
+int l_IsJoyButtonPressed( lua_State *L);
 
 #endif

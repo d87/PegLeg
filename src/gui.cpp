@@ -9,13 +9,14 @@
 
 extern int Shutdown();
 
-gui_struct *gui = 0;
+//gui_struct *gui = 0;
+struct gui_struct gui;
 
 //int WINAPI WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nCmdShow )
 void guiThread( void *param  )
 {
 	HINSTANCE hInstance = (HINSTANCE)param;
-	gui->hInstance = hInstance;
+	gui.hInstance = hInstance;
 
 	WNDCLASSEX wc;
 	LoadLibrary("RichEd20.dll");
@@ -45,11 +46,11 @@ void guiThread( void *param  )
 		wc.lpszClassName,
 		"PegLeg Console" ,
 		WS_OVERLAPPED|WS_SYSMENU,
-		CW_USEDEFAULT , CW_USEDEFAULT , gui->width, gui->height,
+		CW_USEDEFAULT , CW_USEDEFAULT , gui.width, gui.height,
 		NULL , NULL , 
 		hInstance , NULL
 		);
-	gui->hwnd = hwnd;
+	gui.hwnd = hwnd;
 
 	if(hwnd == NULL) {
 		MessageBox(NULL , "Failed to create window", "Error", MB_ICONEXCLAMATION | MB_OK );
@@ -58,8 +59,8 @@ void guiThread( void *param  )
 
 		ShowWindow  (hwnd,SW_HIDE);
 	UpdateWindow(hwnd);
-	UpdateWindow(gui->hwndConsole);
-	SetEvent(gui->event_ready);
+	UpdateWindow(gui.hwndConsole);
+	SetEvent(gui.event_ready);
 	
 
 	MSG Msg;
@@ -73,35 +74,35 @@ void guiThread( void *param  )
 
 int OnCreate( HWND hwnd)
 {
-	gui->hwndConsole = CreateWindowEx(
+	gui.hwndConsole = CreateWindowEx(
 		0,
 		RICHEDIT_CLASS,
 		NULL,
 		WS_CHILD|WS_VISIBLE|ES_READONLY|ES_MULTILINE|WS_VSCROLL|ES_NOHIDESEL,
 		0, 0,
-		gui->width, gui->height,
+		gui.width, gui.height,
 		hwnd,
 		0,
 		0,
 		NULL);
-	if (!gui->hwndConsole) return 0;
+	if (!gui.hwndConsole) return 0;
 
 	//tray
-	if (gui->createtray) {
+	if (gui.createtray) {
 	NOTIFYICONDATA dta;
 
-	gui->hmenuTray = CreatePopupMenu();
-	AppendMenu(gui->hmenuTray, MF_STRING, ID_SHOWCONSOLE, "&Show Console");
-	AppendMenu(gui->hmenuTray, MF_STRING, ID_RELOAD, "&Reload");
-	AppendMenu(gui->hmenuTray, MF_STRING, ID_HIDECONSOLE, "&Hide Console");
-	AppendMenu(gui->hmenuTray, MF_STRING, ID_EXIT, "E&xit");
+	gui.hmenuTray = CreatePopupMenu();
+	AppendMenu(gui.hmenuTray, MF_STRING, ID_SHOWCONSOLE, "&Show Console");
+	AppendMenu(gui.hmenuTray, MF_STRING, ID_RELOAD, "&Reload");
+	AppendMenu(gui.hmenuTray, MF_STRING, ID_HIDECONSOLE, "&Hide Console");
+	AppendMenu(gui.hmenuTray, MF_STRING, ID_EXIT, "E&xit");
 
 	dta.cbSize = sizeof(NOTIFYICONDATA);
 	dta.hWnd = hwnd;
 	dta.uID = ID_TRAY;
 	dta.uFlags = NIF_ICON|NIF_MESSAGE|NIF_TIP;
 	dta.uCallbackMessage = WM_SHELLNOTIFY;
-	dta.hIcon = LoadIcon(gui->hInstance, MAKEINTRESOURCE(ID_ICON1));
+	dta.hIcon = LoadIcon(gui.hInstance, MAKEINTRESOURCE(ID_ICON1));
 	strcpy(dta.szTip, "PegLeg");
 	Shell_NotifyIcon(NIM_ADD, &dta);
 	}
@@ -132,11 +133,11 @@ static void OnCommand(HWND hwnd, int id)
 		Shutdown();
 	}
 	else if (id == ID_SHOWCONSOLE )
-		ShowWindow(gui->hwnd, SW_SHOW);
+		ShowWindow(gui.hwnd, SW_SHOW);
 	else if (id == ID_RELOAD )
 		PostThreadMessage(mainThreadId,WM_COMMAND, RELOADLUA, NULL);
 	else if (id == ID_HIDECONSOLE )
-		ShowWindow(gui->hwnd, SW_HIDE);
+		ShowWindow(gui.hwnd, SW_HIDE);
 }
 
 static int OnShellNotify(HWND hwnd, int uID, int uMessage)
@@ -145,8 +146,8 @@ static int OnShellNotify(HWND hwnd, int uID, int uMessage)
         if(uMessage == WM_RBUTTONDOWN) {
 			POINT cp;
 			GetCursorPos(&cp);
-			SetForegroundWindow(gui->hwnd);
-			TrackPopupMenu(gui->hmenuTray, TPM_LEFTALIGN|TPM_LEFTBUTTON, cp.x, cp.y, 0, gui->hwnd, NULL);
+			SetForegroundWindow(gui.hwnd);
+			TrackPopupMenu(gui.hmenuTray, TPM_LEFTALIGN|TPM_LEFTBUTTON, cp.x, cp.y, 0, gui.hwnd, NULL);
 		}
     }
     return 0;
@@ -187,24 +188,24 @@ LRESULT CALLBACK WndProc (HWND hwnd , UINT msg,WPARAM wParam , LPARAM lParam)
 
 void guiAddText(const char *str)
 {
-	COLORREF clr = RGB(gui->text_r,gui->text_g,gui->text_b);
+	COLORREF clr = RGB(gui.text_r,gui.text_g,gui.text_b);
 	int start_lines, text_length, end_lines;
 	CHARRANGE cr;
 	CHARRANGE ds;
 	CHARFORMAT fmt;
-	text_length = SendMessage(gui->hwndConsole, WM_GETTEXTLENGTH, 0, 0);
+	text_length = SendMessage(gui.hwndConsole, WM_GETTEXTLENGTH, 0, 0);
 	
 	if ( text_length >30000 ) {
 		ds.cpMin = 0;
 		ds.cpMax = text_length - 30000;
-		SendMessage(gui->hwndConsole, EM_EXSETSEL, 0, (LPARAM)&ds);
-		SendMessage(gui->hwndConsole, EM_REPLACESEL, FALSE, 0);
+		SendMessage(gui.hwndConsole, EM_EXSETSEL, 0, (LPARAM)&ds);
+		SendMessage(gui.hwndConsole, EM_REPLACESEL, FALSE, 0);
 	}
 	
 	cr.cpMin = text_length;
 	cr.cpMax = text_length;
 	
-	SendMessage(gui->hwndConsole, EM_EXSETSEL, 0, (LPARAM)&cr); 
+	SendMessage(gui.hwndConsole, EM_EXSETSEL, 0, (LPARAM)&cr); 
 	
 	fmt.cbSize = sizeof(CHARFORMAT);
 	fmt.dwMask = CFM_COLOR|CFM_FACE|CFM_SIZE|CFM_BOLD|CFM_ITALIC|CFM_STRIKEOUT|CFM_UNDERLINE;
@@ -213,8 +214,8 @@ void guiAddText(const char *str)
 	fmt.crTextColor = clr;
 	strcpy(fmt.szFaceName,"Courier New");
 	
-	SendMessage(gui->hwndConsole, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&fmt);
-	SendMessage(gui->hwndConsole, EM_REPLACESEL, FALSE, (LPARAM)str);
+	SendMessage(gui.hwndConsole, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&fmt);
+	SendMessage(gui.hwndConsole, EM_REPLACESEL, FALSE, (LPARAM)str);
 }
 
 int gui_printf( const char *format, va_list arglist )

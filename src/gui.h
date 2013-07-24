@@ -13,8 +13,8 @@ struct gui_struct {
 	int text_r, text_g, text_b;
 	HANDLE event_ready;
 };
-//struct gui_struct gui;
-extern gui_struct *gui;
+extern struct gui_struct gui;
+//extern gui_struct *gui;
 void KillTrayIcon(HWND hwnd);
 void guiThread( void *param  );
 void guiAddText(const char *str);
