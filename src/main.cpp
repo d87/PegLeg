@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdarg.h>
 #include <stdio.h>
+#include <io.h>
 #include <stdlib.h>
 #include <process.h>
 #include <time.h>
@@ -206,6 +207,17 @@ void EnableMouseHooks(bool enable){
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+#ifdef _DEBUG
+	AllocConsole();
+	HWND h;
+	h=GetConsoleWindow();
+	SetActiveWindow(h);
+	int fd = _open_osfhandle( (long)GetStdHandle( STD_OUTPUT_HANDLE ), 0);
+	FILE *fp = _fdopen( fd, "w" );
+	*stdout = *fp;
+	setvbuf( stdout, NULL, _IONBF, 0 );
+#endif
+
 	mainThreadId = GetCurrentThreadId();
 	g_hInstance = hInstance;
 

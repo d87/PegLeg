@@ -9,6 +9,11 @@ extern "C" {
 #include <windows.h>
 #include <psapi.h>
 #include <richedit.h>
+
+#include <Xinput.h>
+#pragma comment( lib, "XINPUT.lib" )
+//#pragma comment( lib, "XINPUT9_1_0.LIB" ) // for vs2012 sdk
+
 #include "gui.h"
 #include "inputemu.h"
 
@@ -34,6 +39,7 @@ int l_shell ( lua_State *luaVM );
 int l_Start ( lua_State *luaVM );
 int l_Shutdown ( lua_State *luaVM );
 int l_GetWindowTitle( lua_State *luaVM );
+int l_RemoveMenu( lua_State *luaVM);
 int l_GetWindowProcess( lua_State *L );
 int l_AddScript( lua_State *luaVM );
 int l_ShowConsole( lua_State *luaVM );
@@ -62,5 +68,6 @@ int l_SetKeyDelay( lua_State *L);
 int l_TurnOffMonitor( lua_State *L);
 int l_GetJoyPosInfo( lua_State *L);
 int l_IsJoyButtonPressed( lua_State *L);
+int l_SetGamepadVibration( lua_State *L);
 
 #endif

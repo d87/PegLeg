@@ -35,6 +35,7 @@ int CreateLua() {
 	lua_register(L, "Start", l_Start);
 	lua_register(L, "Shutdown", l_Shutdown);
 	lua_register(L, "GetWindowTitle", l_GetWindowTitle);
+	lua_register(L, "RemoveMenu", l_RemoveMenu);
 	lua_register(L, "MouseInput", l_MouseInput);
 	lua_register(L, "KeyboardInput", l_KeyboardInput);
 	lua_register(L, "GetCursorPos", l_GetCursorPos);
@@ -54,6 +55,7 @@ int CreateLua() {
 	lua_register(L, "OSDTextLong", l_OSDTextLong);
 	lua_register(L, "GetJoyPosInfo", l_GetJoyPosInfo);
 	lua_register(L, "IsJoyButtonPressed", l_IsJoyButtonPressed);
+	lua_register(L, "SetGamepadVibration", l_SetGamepadVibration);
 
 	lua_register(L, "CreateFrame", l_CreateFrame);
 	
@@ -245,6 +247,11 @@ static int l_GetWindowTitle( lua_State *luaVM ) {
 	lua_pushstring(luaVM, Title);
 	free(Title);
 	return 1;
+}
+
+static int l_RemoveMenu( lua_State *luaVM ) {
+	SetMenu(GetForegroundWindow(), NULL);
+	return 0;
 }
 
 static int l_IsAlwaysOnTop( lua_State *luaVM ) {
@@ -653,4 +660,23 @@ static int l_IsJoyButtonPressed ( lua_State *L ) {
 	lua_pushboolean(L, (g_joyInfo.dwButtons >> buttonID) &1);
 
 	return 1;
+}
+
+static int l_SetGamepadVibration( lua_State *L ) {
+	std::string motor = (const char*) luaL_checkstring(L, 1);
+	const int percent = luaL_checkinteger(L, 2);
+	unsigned int speed =  65535 * ((float)percent/100);
+
+	XINPUT_VIBRATION vibration;
+	ZeroMemory( &vibration, sizeof(XINPUT_VIBRATION) );
+	if (motor == "LEFT")
+		vibration.wLeftMotorSpeed = speed; // use any value between 0-65535 here
+	else if (motor == "RIGHT")
+		vibration.wRightMotorSpeed = speed; // use any value between 0-65535 here
+	else if (motor == "BOTH") {
+		vibration.wRightMotorSpeed = speed;
+		vibration.wLeftMotorSpeed = speed;
+	}
+	XInputSetState( 0, &vibration );
+	return 0;
 }

@@ -169,6 +169,9 @@ RegisterEvent("KeyDown",function (key,vk,scan)
     end
 end)
 
+
+AddScript("gamepad.lua")
+
 --~ local t1 = 0
 --~ local t2 = 0
 --~ RegisterHotKey("ALT","G",function ()
