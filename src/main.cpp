@@ -29,7 +29,11 @@ HINSTANCE g_hInstance;
 HHOOK hhkLowLevelKeyboard = 0;
 HHOOK hhkLowLevelMouse = 0;
 HHOOK hhkActivate = 0;
+#ifndef XINPUT
 JOYINFOEX g_joyInfo;
+#else
+XINPUT_STATE g_ControllerState;
+#endif
 
 int mainThreadId;
 
@@ -274,10 +278,32 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	double pollingTimeout = 0.015;
 	double prevPollTime = 0;
 	double now = 0;
-	//JOYINFOEX joyInfo;
+#ifndef XINPUT
 	memset(&g_joyInfo, 0, sizeof(g_joyInfo));
 	g_joyInfo.dwSize = sizeof(g_joyInfo);
 	g_joyInfo.dwFlags = JOY_RETURNALL;
+#else
+	DWORD prevPacketNumber = 0;
+	ZeroMemory( &g_ControllerState, sizeof(XINPUT_STATE) );
+	char *ButtonNames[17] = {
+		"UP",
+		"DOWN",
+		"LEFT",
+		"RIGHT",
+		"START",
+		"BACK",
+		"LS",
+		"RS",
+		"L1",
+		"R1",
+		"UB1",
+		"UB2",
+		"A",
+		"B",
+		"X",
+		"Y"
+	};
+#endif
 	DWORD prevJoyButtonState = 0;
 	DWORD changedJoyButtons = 0;
 
@@ -314,6 +340,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 			ProcTimers( (int)(pollingTimeout*1000) );
 
+#ifndef XINPUT
 			if (joyGetPosEx(JOYSTICKID1, &g_joyInfo) == JOYERR_NOERROR) {
 				for (int i=0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++ )
 					FireEvent(L, events[JOYUPDATE][i], 0, 0, 0);
@@ -336,6 +363,36 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			}else{
 				g_joyInfo.dwPOV = -2;
 			}
+#else
+			 //ZeroMemory( &ControllerState, sizeof(XINPUT_STATE) );
+			if (XInputGetState( 0, &g_ControllerState )  == ERROR_SUCCESS ) {
+				//if (g_ControllerState.dwPacketNumber != prevPacketNumber) {
+					prevPacketNumber = g_ControllerState.dwPacketNumber;
+
+					for (int i=0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++ )
+						FireEvent(L, events[JOYUPDATE][i], 0, 0, 0);
+
+					changedJoyButtons = prevJoyButtonState ^ g_ControllerState.Gamepad.wButtons;
+					prevJoyButtonState = g_ControllerState.Gamepad.wButtons;
+					if (changedJoyButtons){
+						for (int btn=0;btn<20; btn++){
+							if (EXTRACTBIT(changedJoyButtons, btn)){
+								//printf("%d something\n", btn);
+								if (EXTRACTBIT(prevJoyButtonState, btn)){ //dunno why it's inverted
+									for (int i=0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++ )
+										FireEvent(L, events[JOYBUTTONDOWN][i], ButtonNames[btn], btn+1, 0);
+								}else{
+									for (int i=0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++ )
+										FireEvent(L, events[JOYBUTTONUP][i], ButtonNames[btn], btn+1, 0);
+								}
+							}
+						}
+					}
+				//}
+			} else {
+				//g_ControllerState.Gamepad. = NULL;
+			}
+#endif
 		}
 
 		Sleep(1);

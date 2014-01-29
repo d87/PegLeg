@@ -16,6 +16,13 @@
 
 #define RELOADLUA 0xAAA
 
+#define XINPUT
+
+#ifdef XINPUT
+#include <Xinput.h>
+#pragma comment( lib, "XINPUT.lib" )
+//#pragma comment( lib, "XINPUT9_1_0.LIB" ) // for vs2012 sdk
+#endif
 struct enum_struct {
 //	int type;
 	char *pattern;
@@ -31,12 +38,21 @@ struct event_arglist {
 	int scanCode;
 };
 
+
+#ifndef XINPUT
+extern JOYINFOEX g_joyInfo;
+#else
+
+//#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE 9000
+extern XINPUT_STATE g_ControllerState;
+#endif
+
 extern int events[12][MAX_EVENTS];
 extern int timerMap[MAX_EVENTS];
 extern int mainThreadId;
 extern HHOOK hhkLowLevelKeyboard;
 extern HHOOK hhkLowLevelMouse;
-extern JOYINFOEX g_joyInfo;
+
 void EnableMouseHooks(bool enable);
 void error (lua_State *L, const char *fmt, ...);
 int Shutdown();

@@ -633,7 +633,7 @@ static int l_TurnOffMonitor( lua_State *L ) {
 }
 
 static int l_GetJoyPosInfo ( lua_State *L ) {
-	//const int joyID = luaL_checkinteger(L, 1);
+#ifndef XINPUT
 	// POV, X, Y, Z, R, U
 	DWORD POV = g_joyInfo.dwPOV;
 	if (POV == -2) return 0; //joystick polling error occured
@@ -651,15 +651,27 @@ static int l_GetJoyPosInfo ( lua_State *L ) {
 	lua_pushnumber ( L, g_joyInfo.dwUpos*100/0xFFFF);
 
 	return 6;
+#else
+	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbLX*100/0xFFFF);
+	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbLY*100/0xFFFF);
+	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbRX*100/0xFFFF);
+	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbRY*100/0xFFFF);
+	lua_pushnumber ( L, g_ControllerState.Gamepad.bLeftTrigger*100/0xFF);
+	lua_pushnumber ( L, g_ControllerState.Gamepad.bRightTrigger*100/0xFF);
+	return 6;
+#endif
 }
 
 static int l_IsJoyButtonPressed ( lua_State *L ) {
-	//const int joyID = luaL_checkinteger(L, 1);
+#ifndef XINPUT
 	const int buttonID = luaL_checkinteger(L, 1) - 1;
-
 	lua_pushboolean(L, (g_joyInfo.dwButtons >> buttonID) &1);
-
 	return 1;
+#else
+	const int buttonID = luaL_checkinteger(L, 1) - 1;
+	lua_pushboolean(L, (g_ControllerState.Gamepad.wButtons >> buttonID) &1);
+	return 1;
+#endif
 }
 
 static int l_SetGamepadVibration( lua_State *L ) {

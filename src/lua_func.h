@@ -10,10 +10,6 @@ extern "C" {
 #include <psapi.h>
 #include <richedit.h>
 
-#include <Xinput.h>
-#pragma comment( lib, "XINPUT.lib" )
-//#pragma comment( lib, "XINPUT9_1_0.LIB" ) // for vs2012 sdk
-
 #include "gui.h"
 #include "inputemu.h"
 

@@ -1,6 +1,4 @@
-
 local os_clock = os.clock
-
 
 
 local keyrepeat_string
@@ -21,35 +19,25 @@ local function KeyRepeatStop()
 end
 
 
--- L1 = 5
--- R2 = 6
--- Cross = 1
--- Circle = 2
--- Square = 3
--- Triangle = 4
--- Start = 8
--- Select = 8
-
 local L2Handler
 local R2Handler
-local POVHandler
 local RSHandler
 
 local dummy = function() end
 local JoyDownCallbacksDefault = setmetatable({
-    [1] = function() KeyboardInput("(SPACE)") end,
-    [2] = function() KeyRepeat("(RIGHT)") end,
-    [3] = function() KeyRepeat("(LEFT)") end,
-    [4] = function() KeyboardInput("(RETURN)") end,
-    [6] = function() MouseInput("LEFTDOWN") end,
-    [7] = function()
+    ["A"] = function() KeyboardInput("(SPACE)") end,
+    ["B"] = function() KeyRepeat("(RIGHT)") end,
+    ["X"] = function() KeyRepeat("(LEFT)") end,
+    ["Y"] = function() KeyboardInput("(RETURN)") end,
+    ["R1"] = function() MouseInput("LEFTDOWN") end,
+    ["BACK"] = function()
         if IsJoyButtonPressed(5) then
             Start("H:\\soft\\monitors_off.exe")   
         else
             KeyboardInput("(F8)")
         end
     end,
-    [8] = function() KeyboardInput("(NEXT)") end,
+    ["START"] = function() KeyboardInput("(NEXT)") end,
     ["UP"] = function()
         if IsJoyButtonPressed(5) then
             KeyRepeat("(F6)")
@@ -69,9 +57,9 @@ local JoyDownCallbacksDefault = setmetatable({
 
 
 local JoyUpCallbacksDefault = setmetatable({
-    [2] = function() KeyRepeatStop() end,
-    [3] = function() KeyRepeatStop() end,
-    [6] = function() MouseInput("LEFTUP") end,
+    ["X"] = function() KeyRepeatStop() end,
+    ["B"] = function() KeyRepeatStop() end,
+    ["R1"] = function() MouseInput("LEFTUP") end,
     ["UP"] = function() KeyRepeatStop() end,
     ["DOWN"] = function() KeyRepeatStop() end,
     ["R2"] = function() MouseInput("RIGHTUP") end,
@@ -126,10 +114,10 @@ local JoyUpCallbacks = JoyUpCallbacksDefault
 -- }, { __index = JoyDownCallbacksDefault })
 
 
-AddSequence(5, "RIGHT", "LEFT", 5, "RIGHT", "LEFT", 5, function()
+AddSequence("L1", "RIGHT", "LEFT", "L1", "RIGHT", "LEFT", "L1", function()
     if R2Handler == R2HandlerDefault then
-        R2Handler = R2HandlerVibration
-        L2Handler = L2HandlerVibration
+        R2Handler = VibrationHandler("LEFT")
+        L2Handler = VibrationHandler("RIGHT")
     else
         R2Handler = R2HandlerDefault
         L2Handler = L2HandlerDefault
@@ -137,16 +125,14 @@ AddSequence(5, "RIGHT", "LEFT", 5, "RIGHT", "LEFT", 5, function()
 end)
 
 
-AddSequence(5, "LEFT", "RIGHT", 5, "LEFT", "RIGHT", 5, function()
+AddSequence("L1", "LEFT", "RIGHT", "L1", "LEFT", "RIGHT", "L1", function()
     if JoyDownCallbacks ~= JoyEmptyCallbacks then
-        -- POVHandler = dummy
         L2Handler = dummy
         R2Handler = dummy
         RSHandler = dummy
         JoyDownCallbacks = JoyEmptyCallbacks
         JoyUpCallbacks = JoyEmptyCallbacks
     else
-        -- POVHandler = POVHandlerDefault
         R2Handler = R2HandlerDefault
         L2Handler = L2HandlerDefault
         RSHandler = GamepadMouseMove
@@ -155,10 +141,10 @@ AddSequence(5, "LEFT", "RIGHT", 5, "LEFT", "RIGHT", 5, function()
     end
 end)
 
-function OnJoyButtonDown(btn)
+function OnJoyButtonDown(btn, btnID)
     JoyDownCallbacks[btn]()
 end
-function OnJoyButtonUp(btn)
+function OnJoyButtonUp(btn, btnID)
     SequenceProcess(btn)
     JoyUpCallbacks[btn]()
 end
@@ -171,111 +157,39 @@ RegisterEvent("JoyButtonDown", OnJoyButtonDown)
 
 
 
+function TriggerAsButton(threshold, downFunc, upFunc)
+    local prev = 0
+    return function(TriggerValue)
+        if TriggerValue >= threshold and prev < threshold then
+            downFunc()
+        end
+        if prev >= threshold and TriggerValue < threshold then
+            upFunc()
+        end
+        prev = TriggerValue
+    end
+end
 
-
-do
-    function right_trigger_as_button(downFunc, upFunc)
-        local prevZ = 50
-        local onR2 = downFunc
-        local onR2release = upFunc
-        return function(axisZ)
-            if axisZ <= 30 and prevZ > 30 then
-                onR2()
-            end
-            if prevZ <= 30 and axisZ > 30 then
-                onR2release()
-            end
-            prevZ = axisZ
+function VibrationHandler(motor)
+    local prev = 0
+    return function(v)
+        if prev ~= v then
+            SetGamepadVibration(motor, v)
+            prev = v
         end
     end
 end
 
-
-do
-    function left_trigger_as_button(downFunc, upFunc)
-        local prevZ = 50
-        local onL2 = downFunc
-        local onL2release = upFunc
-        return function(axisZ)
-            if axisZ >= 70 and prevZ < 70 then
-                onL2()
-            end
-            if prevZ >= 70 and axisZ < 70 then
-                onL2release()
-            end
-            prevZ = axisZ
-        end
-    end
-end
-
-L2HandlerDefault = left_trigger_as_button(function() OnJoyButtonDown("L2") end, function() OnJoyButtonUp("L2") end)
-R2HandlerDefault = right_trigger_as_button(function() OnJoyButtonDown("R2") end, function() OnJoyButtonUp("R2") end)
-
-do 
-    local prevVibration = 0
-    R2HandlerVibration = function(axisZ)
-        local p = 0
-        if axisZ < 49 then
-            p = (50 - axisZ) * 2
-            if p < 10 then p = 0 end
-        end
-        if prevVibration ~= p then
-            SetGamepadVibration("LEFT", p)
-            prevVibration = p
-        end
-    end
-end
-
-do 
-    local prevVibration = 0
-    L2HandlerVibration = function(axisZ)
-        local p = 0
-        if axisZ > 51 then
-            p = (axisZ - 50) * 2
-            if p < 10 then p = 0 end
-        end
-        if prevVibration ~= p then
-            SetGamepadVibration("RIGHT", p)
-            prevVibration = p
-        end
-    end
-end
-
-
-do
-    local prev_pov = "CENTERED"
-    function POVHandlerDefault(pov)
-        if pov ~= prev_pov then
-            if prev_pov ~= "CENTERED" then
-                -- pov_callbacks[prev_pov][2]()
-                OnJoyButtonUp(prev_pov)
-            end
-            if pov ~= "CENTERED" then
-                -- pov_callbacks[pov][1]()
-                OnJoyButtonDown(pov)
-            end
-        end
-        prev_pov = pov
-    end
-end
-
-
-do
+function GamepadMouseMove(msens)
     local threshold = 5
-    local msens = 0.3
-    function GamepadMouseMove(ar, au)
+    local math_abs = math.abs
+    return function (X, Y)
         local dx,dy = 0,0
-        if au > 50+threshold  then
-            dx = (au - 50+threshold)*msens
+        if math_abs(X) > threshold then
+            dx = X*msens
         end
-        if au < 50-threshold  then
-            dx = ( au - (50-threshold))*msens
-        end
-        if ar > 50+threshold  then
-            dy = (ar - 50+threshold)*msens
-        end
-        if ar < 50-threshold  then
-            dy = ( ar-(50-threshold))*msens
+        if math_abs(Y) > threshold then
+            dy = -Y*msens
         end
         if dx == 0 and dy == 0 then
             return
@@ -285,15 +199,18 @@ do
     end
 end
 
+
+L2HandlerDefault = TriggerAsButton(40, function() OnJoyButtonDown("L2") end, function() OnJoyButtonUp("L2") end)
+R2HandlerDefault = TriggerAsButton(40, function() OnJoyButtonDown("R2") end, function() OnJoyButtonUp("R2") end)
+RSHandlerDefault = GamepadMouseMove(0.3)
+
 L2Handler = L2HandlerDefault
 R2Handler = R2HandlerDefault
-POVHandler = POVHandlerDefault
-RSHandler = GamepadMouseMove
+RSHandler = RSHandlerDefault
 
 RegisterEvent("JoyUpdate",function()
-    local pov, ax,ay,az,ar,au = GetJoyPosInfo()
-    L2Handler(az)
-    R2Handler(az)
-    POVHandler(pov)
-    RSHandler(ar, au)
+    local LX,LY, RX,RY, LT,RT = GetJoyPosInfo()
+    L2Handler(LT)
+    R2Handler(RT)
+    RSHandler(RX, RY)
 end)
