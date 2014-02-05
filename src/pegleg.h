@@ -45,6 +45,7 @@ extern JOYINFOEX g_joyInfo;
 
 //#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE 9000
 extern XINPUT_STATE g_ControllerState;
+extern char *g_GamepadButtonNames[17];
 #endif
 
 extern int events[12][MAX_EVENTS];

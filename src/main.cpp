@@ -17,7 +17,7 @@ extern "C" {
 #include "lua_func.h"
 #include <richedit.h>
 
-#pragma comment( lib, "lua5.1.lib" )
+#pragma comment( lib, "lua5.2.lib" )
 #pragma comment( lib, "Winmm.lib" )
 
 #define EXTRACTBIT(var, index) ((var >> index) & 1)
@@ -33,6 +33,25 @@ HHOOK hhkActivate = 0;
 JOYINFOEX g_joyInfo;
 #else
 XINPUT_STATE g_ControllerState;
+char *g_GamepadButtonNames[17] = {
+	"UP",
+	"DOWN",
+	"LEFT",
+	"RIGHT",
+	"START",
+	"BACK",
+	"LS",
+	"RS",
+	"L1",
+	"R1",
+	"UB1",
+	"UB2",
+	"A",
+	"B",
+	"X",
+	"Y",
+	(char)NULL
+};
 #endif
 
 int mainThreadId;
@@ -285,24 +304,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 #else
 	DWORD prevPacketNumber = 0;
 	ZeroMemory( &g_ControllerState, sizeof(XINPUT_STATE) );
-	char *ButtonNames[17] = {
-		"UP",
-		"DOWN",
-		"LEFT",
-		"RIGHT",
-		"START",
-		"BACK",
-		"LS",
-		"RS",
-		"L1",
-		"R1",
-		"UB1",
-		"UB2",
-		"A",
-		"B",
-		"X",
-		"Y"
-	};
 #endif
 	DWORD prevJoyButtonState = 0;
 	DWORD changedJoyButtons = 0;
@@ -380,10 +381,10 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 								//printf("%d something\n", btn);
 								if (EXTRACTBIT(prevJoyButtonState, btn)){ //dunno why it's inverted
 									for (int i=0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++ )
-										FireEvent(L, events[JOYBUTTONDOWN][i], ButtonNames[btn], btn+1, 0);
+										FireEvent(L, events[JOYBUTTONDOWN][i], g_GamepadButtonNames[btn], btn+1, 0);
 								}else{
 									for (int i=0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++ )
-										FireEvent(L, events[JOYBUTTONUP][i], ButtonNames[btn], btn+1, 0);
+										FireEvent(L, events[JOYBUTTONUP][i], g_GamepadButtonNames[btn], btn+1, 0);
 								}
 							}
 						}

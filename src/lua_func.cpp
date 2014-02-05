@@ -16,7 +16,7 @@ hash_map<std::string, PLTIMER> Timers;
 
 lua_State *L = 0;
 
-static const struct luaL_reg timerlib [] = {
+static const struct luaL_Reg timerlib [] = {
 	//{"new", l_CreateNewUserdata},
 	{"Kill", l_KillFrame},
 	{"GetID", l_Frame_GetData},
@@ -89,7 +89,9 @@ int InitLua() {
 		lua_register(L, "print", luaB_print);
 
 	luaL_newmetatable(L, "PegLeg.timer");
-	luaL_openlib(L, "timer", timerlib, 0);
+	lua_newtable(L);
+	luaL_setfuncs(L, timerlib, 0);
+	lua_setglobal(L, "timer");
 
 	LoadScript(L, "pegleg.init.lua");
 
@@ -668,8 +670,19 @@ static int l_IsJoyButtonPressed ( lua_State *L ) {
 	lua_pushboolean(L, (g_joyInfo.dwButtons >> buttonID) &1);
 	return 1;
 #else
-	const int buttonID = luaL_checkinteger(L, 1) - 1;
-	lua_pushboolean(L, (g_ControllerState.Gamepad.wButtons >> buttonID) &1);
+	int buttonID = -1;
+	if (lua_isstring(L, 1)) {
+		const char* btnName = (const char*) luaL_checkstring(L, 1);
+		for (int i=0; g_GamepadButtonNames[i]; i++)
+			if (!strcmp(_strupr((char*)btnName), g_GamepadButtonNames[i]))
+				buttonID = i;
+	} else {
+		buttonID = luaL_checkinteger(L, 1) - 1;
+	}
+	if (buttonID > -1)
+		lua_pushboolean(L, (g_ControllerState.Gamepad.wButtons >> buttonID) &1);
+	else
+		lua_pushnil(L);
 	return 1;
 #endif
 }
