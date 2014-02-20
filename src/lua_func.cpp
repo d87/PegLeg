@@ -637,29 +637,20 @@ static int l_TurnOffMonitor( lua_State *L ) {
 static int l_GetJoyPosInfo ( lua_State *L ) {
 #ifndef XINPUT
 	// POV, X, Y, Z, R, U
-	int jid = luaL_optinteger(L, 1, -1);
-	if (jid == -1) {
-		for (int i = 0; i < 4; i++){
-			if (g_joyInfo[i].dwPOV != -2)
-				jid = i+1;
-		}
-	}
-	jid--;
-	if (jid == -2) return 0; //no joysticks connected
-	DWORD POV = g_joyInfo[jid].dwPOV;
+	if (g_pJoystick == NULL) return 0;
 
-	if (POV  == JOY_POVCENTERED) lua_pushstring ( L, "CENTERED");
+	DWORD POV = js.rgdwPOV[0];
+	if (POV  == JOY_POVCENTERED || LOWORD(POV) == 0xFFFF) lua_pushstring ( L, "CENTERED");
 	else if (POV  == JOY_POVBACKWARD) lua_pushstring ( L, "DOWN");
 	else if (POV  == JOY_POVFORWARD) lua_pushstring ( L, "UP");
 	else if (POV  == JOY_POVLEFT) lua_pushstring ( L, "LEFT");
 	else if (POV  == JOY_POVRIGHT) lua_pushstring ( L, "RIGHT");
-
-	lua_pushnumber ( L, g_joyInfo[jid].dwXpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo[jid].dwYpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo[jid].dwZpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo[jid].dwRpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo[jid].dwUpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo[jid].dwVpos*100/0xFFFF);
+	lua_pushnumber ( L, js.lX*100/0xFFFF);
+	lua_pushnumber ( L, js.lY*100/0xFFFF);
+	lua_pushnumber ( L, js.lZ*100/0xFFFF);
+	lua_pushnumber ( L, js.lRx*100/0xFFFF);
+	lua_pushnumber ( L, js.lRy*100/0xFFFF);
+	lua_pushnumber ( L, js.lRz*100/0xFFFF);
 
 	return 7;
 #else
@@ -675,15 +666,7 @@ static int l_GetJoyPosInfo ( lua_State *L ) {
 
 static int l_IsJoyButtonPressed ( lua_State *L ) {
 #ifndef XINPUT
-	int jid = luaL_optinteger(L, 2, -1);
-	if (jid == -1) {
-		for (int i = 0; i < 4; i++){
-			if (g_joyInfo[i].dwPOV != -2)
-				jid = i+1;
-		}
-	}
-	jid--;
-	if (jid == -2) return 0; //no joysticks connected
+	if (g_pJoystick == NULL) return 0;
 
 	int buttonID = -1;
 	if (lua_isstring(L, 1)) {
@@ -698,7 +681,7 @@ static int l_IsJoyButtonPressed ( lua_State *L ) {
 	//printf("jid %d buttons %d buttonid %d", jid, g_joyInfo[jid].dwButtons, buttonID);
 
 	if (buttonID > -1)
-		lua_pushboolean(L, (g_joyInfo[jid].dwButtons >> buttonID) &1);
+		lua_pushboolean(L, (btnState >> buttonID) &1);
 	else
 		lua_pushnil(L);
 	return 1;

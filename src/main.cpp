@@ -30,7 +30,13 @@ HHOOK hhkLowLevelKeyboard = 0;
 HHOOK hhkLowLevelMouse = 0;
 HHOOK hhkActivate = 0;
 #ifndef XINPUT
-JOYINFOEX g_joyInfo[4];
+
+//#define DIRECTINPUT_VERSION 0x0800
+LPDIRECTINPUT8 g_pDI;
+LPDIRECTINPUTDEVICE8 g_pJoystick;
+
+DIJOYSTATE2 js;
+DWORD btnState;
 char *g_GamepadButtonNames[17] = {
 	"X", //Rect
 	"A", //Cross
@@ -245,10 +251,30 @@ void EnableMouseHooks(bool enable){
 	}
 }
 
-
-
-int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+#ifndef XINPUT
+BOOL CALLBACK EnumJoysticksCallback( const DIDEVICEINSTANCE* pdidInstance, VOID* pContext )
 {
+    HRESULT hr;
+
+    // Obtain an interface to the enumerated joystick.
+    hr = g_pDI->CreateDevice( pdidInstance->guidInstance, &g_pJoystick, NULL );
+
+	if( FAILED( hr = g_pJoystick->SetDataFormat( &c_dfDIJoystick2 ) ) )
+        return hr;
+
+    if( FAILED( hr = g_pJoystick->SetCooperativeLevel( NULL, DISCL_NONEXCLUSIVE| DISCL_BACKGROUND ) ) )
+        return hr;
+
+    if( FAILED( hr ) )
+        return DIENUM_CONTINUE;
+
+    return DIENUM_STOP;
+	//return DIENUM_CONTINUE;
+}
+#endif
+
+int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
+
 #ifdef _DEBUG
 	AllocConsole();
 	HWND h;
@@ -319,18 +345,23 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	double prevPollTime = 0;
 	double now = 0;
 #ifndef XINPUT
-	JOYINFO tmpJoyInfo;
-	for (int i=0; i<4; i++) {
-		memset(&g_joyInfo[i], 0, sizeof(JOYINFOEX));
-		g_joyInfo[i].dwSize = sizeof(JOYINFOEX);
-		g_joyInfo[i].dwFlags = JOY_RETURNALL;
-	}
+	HRESULT hr;
+    // Create a DInput object
+	g_pJoystick = NULL;
+	g_pDI = NULL;
+    if( FAILED( hr = DirectInput8Create( GetModuleHandle( NULL ), DIRECTINPUT_VERSION,
+                                         IID_IDirectInput8, ( VOID** )&g_pDI, NULL ) ) )
+        return hr;
+	double lastDeviceCheck = 0;
 #else
 	DWORD prevPacketNumber = 0;
 	ZeroMemory( &g_ControllerState, sizeof(XINPUT_STATE) );
+
 #endif
 	DWORD prevJoyButtonState = 0;
 	DWORD changedJoyButtons = 0;
+	DWORD highestBit = 1 << 31;
+
 
 	MSG msg;
 	while(1){
@@ -366,33 +397,44 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			ProcTimers( (int)(pollingTimeout*1000) );
 
 #ifndef XINPUT
+			if (g_pJoystick == NULL || FAILED( hr = g_pJoystick->Acquire()))  {
+				if (now > lastDeviceCheck + 2000){ //2s timeouts
+					lastDeviceCheck = now;
+					g_pJoystick = NULL;
+					hr = g_pDI->EnumDevices( DI8DEVCLASS_GAMECTRL, EnumJoysticksCallback, NULL, DIEDFL_ATTACHEDONLY );
+				}
+			} else {
+				hr = g_pJoystick->Poll();
+				hr = g_pJoystick->GetDeviceState( sizeof( DIJOYSTATE2 ), &js );
+				hr = g_pJoystick->Unacquire();
 
-//#ifdef JOYGETPOS
-			for (int jid = 0; jid < 4; jid++) {
-				if (joyGetPosEx(jid, &g_joyInfo[jid]) == JOYERR_NOERROR) {
-					for (int i=0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++ )
-						FireEvent(L, events[JOYUPDATE][i], 0, jid+1, 0);
+				btnState=0;
+				for (int i = 0; i<32; i++) {
+					btnState = btnState >> 1;
+					btnState += js.rgbButtons[i] == 128 ? highestBit : 0;
+				}
 
-					changedJoyButtons = prevJoyButtonState ^ g_joyInfo[jid].dwButtons;
-					prevJoyButtonState = g_joyInfo[jid].dwButtons;
-					if (changedJoyButtons){
-						for (int btn=0;btn<32; btn++){
-							if (EXTRACTBIT(changedJoyButtons, btn)){
-								if (EXTRACTBIT(prevJoyButtonState, btn)){ //it's inverted
-									for (int i=0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++ )
-										FireEvent(L, events[JOYBUTTONDOWN][i], g_GamepadButtonNames[btn], btn+1, jid+1);
-								}else{
-									for (int i=0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++ )
-										FireEvent(L, events[JOYBUTTONUP][i], g_GamepadButtonNames[btn], btn+1, jid+1);
-								}
+				for (int i=0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++ )
+						FireEvent(L, events[JOYUPDATE][i], 0, 0, 0);
+
+
+				changedJoyButtons = prevJoyButtonState ^ btnState;
+				prevJoyButtonState = btnState;
+
+				if (changedJoyButtons){
+					for (int btn=0;btn<32; btn++){
+						if (EXTRACTBIT(changedJoyButtons, btn)){
+							if (EXTRACTBIT(prevJoyButtonState, btn)){ //it's inverted
+								for (int i=0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++ )
+									FireEvent(L, events[JOYBUTTONDOWN][i], g_GamepadButtonNames[btn], btn+1, 0);
+							}else{
+								for (int i=0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++ )
+									FireEvent(L, events[JOYBUTTONUP][i], g_GamepadButtonNames[btn], btn+1, 0);
 							}
 						}
 					}
-				}else{
-					g_joyInfo[jid].dwPOV = -2;
 				}
 			}
-//#endif
 #else
 			 //ZeroMemory( &ControllerState, sizeof(XINPUT_STATE) );
 			if (XInputGetState( 0, &g_ControllerState )  == ERROR_SUCCESS ) {
@@ -433,5 +475,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	//UnhookWindowsHookEx(hhkLowLevelMouse);
 	lua_close(L);
 
-  return 1;
+	return 1;
 }
+
+

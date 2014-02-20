@@ -1,4 +1,4 @@
-#include <Windows.h>
+#include <windows.h>
 
 COLORREF color = 0;
 HDC R;
