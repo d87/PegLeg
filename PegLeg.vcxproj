@@ -129,7 +129,7 @@
       <SmallerTypeCheck>true</SmallerTypeCheck>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>lua5.1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX64</TargetMachine>
@@ -195,6 +195,7 @@
     <ClCompile Include="src\inputemu.cpp" />
     <ClCompile Include="src\lua_func.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\onscreendisplay.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\gui.h" />

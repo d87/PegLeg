@@ -16,7 +16,7 @@
 
 #define RELOADLUA 0xAAA
 
-#define XINPUT
+//#define XINPUT
 
 #ifdef XINPUT
 #include <Xinput.h>
@@ -40,13 +40,13 @@ struct event_arglist {
 
 
 #ifndef XINPUT
-extern JOYINFOEX g_joyInfo;
+extern JOYINFOEX g_joyInfo[4];
 #else
 
 //#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE 9000
 extern XINPUT_STATE g_ControllerState;
-extern char *g_GamepadButtonNames[17];
 #endif
+extern char *g_GamepadButtonNames[17];
 
 extern int events[12][MAX_EVENTS];
 extern int timerMap[MAX_EVENTS];

@@ -584,7 +584,7 @@ static int l_DisableMouseHooks( lua_State *luaVM ) {
 }
 
 static int l_OSDTextLong ( lua_State *L ) {
-	const char* text = luaL_checkstring(L, 1);
+	std::string text = (const char*)  luaL_checkstring(L, 1);
 	const int _x = luaL_checkinteger(L, 2);
 	const int _y = luaL_checkinteger(L, 3);
 	double r = ( lua_isnumber(L, 4) ? lua_tonumber(L, 4) : 1 );
@@ -602,13 +602,13 @@ static int l_OSDTextLong ( lua_State *L ) {
 
 	color = RGB(r*255,g*255,b*255);
 	HWND Desktop = GetDesktopWindow();
-	R = GetWindowDC(GetDesktopWindow());
+	R = GetWindowDC(Desktop);
 	SetBkMode(R,OPAQUE);//TRANSPARENT);
 	SetBkColor(R,RGB(0,0,0));
 	SetTextColor(R,color);
 	SelectObject(R, CreateFont(size,0,0,0,0,0,0,0,1,0,0,0,0,font) );
-	TextOutA(R,_x,_y,text,strlen(text));
-	ReleaseDC(0,R);
+	TextOutA(R,_x,_y, text.c_str(), text.length() );
+	ReleaseDC(Desktop,R);
 	lua_pushnumber ( L, 1);
 	return 1;
 }
@@ -637,8 +637,16 @@ static int l_TurnOffMonitor( lua_State *L ) {
 static int l_GetJoyPosInfo ( lua_State *L ) {
 #ifndef XINPUT
 	// POV, X, Y, Z, R, U
-	DWORD POV = g_joyInfo.dwPOV;
-	if (POV == -2) return 0; //joystick polling error occured
+	int jid = luaL_optinteger(L, 1, -1);
+	if (jid == -1) {
+		for (int i = 0; i < 4; i++){
+			if (g_joyInfo[i].dwPOV != -2)
+				jid = i+1;
+		}
+	}
+	jid--;
+	if (jid == -2) return 0; //no joysticks connected
+	DWORD POV = g_joyInfo[jid].dwPOV;
 
 	if (POV  == JOY_POVCENTERED) lua_pushstring ( L, "CENTERED");
 	else if (POV  == JOY_POVBACKWARD) lua_pushstring ( L, "DOWN");
@@ -646,13 +654,14 @@ static int l_GetJoyPosInfo ( lua_State *L ) {
 	else if (POV  == JOY_POVLEFT) lua_pushstring ( L, "LEFT");
 	else if (POV  == JOY_POVRIGHT) lua_pushstring ( L, "RIGHT");
 
-	lua_pushnumber ( L, g_joyInfo.dwXpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo.dwYpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo.dwZpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo.dwRpos*100/0xFFFF);
-	lua_pushnumber ( L, g_joyInfo.dwUpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo[jid].dwXpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo[jid].dwYpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo[jid].dwZpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo[jid].dwRpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo[jid].dwUpos*100/0xFFFF);
+	lua_pushnumber ( L, g_joyInfo[jid].dwVpos*100/0xFFFF);
 
-	return 6;
+	return 7;
 #else
 	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbLX*100/0xFFFF);
 	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbLY*100/0xFFFF);
@@ -666,8 +675,32 @@ static int l_GetJoyPosInfo ( lua_State *L ) {
 
 static int l_IsJoyButtonPressed ( lua_State *L ) {
 #ifndef XINPUT
-	const int buttonID = luaL_checkinteger(L, 1) - 1;
-	lua_pushboolean(L, (g_joyInfo.dwButtons >> buttonID) &1);
+	int jid = luaL_optinteger(L, 2, -1);
+	if (jid == -1) {
+		for (int i = 0; i < 4; i++){
+			if (g_joyInfo[i].dwPOV != -2)
+				jid = i+1;
+		}
+	}
+	jid--;
+	if (jid == -2) return 0; //no joysticks connected
+
+	int buttonID = -1;
+	if (lua_isstring(L, 1)) {
+		const char* btnName = (const char*) luaL_checkstring(L, 1);
+		for (int i=0; g_GamepadButtonNames[i]; i++)
+			if (!strcmp(_strupr((char*)btnName), g_GamepadButtonNames[i]))
+				buttonID = i;
+	} else {
+		buttonID = luaL_checkinteger(L, 1) - 1;
+	}
+
+	//printf("jid %d buttons %d buttonid %d", jid, g_joyInfo[jid].dwButtons, buttonID);
+
+	if (buttonID > -1)
+		lua_pushboolean(L, (g_joyInfo[jid].dwButtons >> buttonID) &1);
+	else
+		lua_pushnil(L);
 	return 1;
 #else
 	int buttonID = -1;
@@ -688,6 +721,7 @@ static int l_IsJoyButtonPressed ( lua_State *L ) {
 }
 
 static int l_SetGamepadVibration( lua_State *L ) {
+#ifdef XINPUT
 	std::string motor = (const char*) luaL_checkstring(L, 1);
 	const int percent = luaL_checkinteger(L, 2);
 	unsigned int speed =  65535 * ((float)percent/100);
@@ -703,5 +737,6 @@ static int l_SetGamepadVibration( lua_State *L ) {
 		vibration.wLeftMotorSpeed = speed;
 	}
 	XInputSetState( 0, &vibration );
+#endif
 	return 0;
 }
