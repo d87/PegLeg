@@ -10,7 +10,7 @@ struct gui_struct {
 	int createtray;
 	int width;
 	int height;
-	int text_r, text_g, text_b;
+	float text_r, text_g, text_b;
 	HANDLE event_ready;
 };
 extern struct gui_struct gui;

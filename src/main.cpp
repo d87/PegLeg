@@ -293,6 +293,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	L = luaL_newstate();
 	LoadScript(L, "pegleg.keys.lua");
 	lua_getglobal(L, "code_name");
+
+	ZeroMemory(&VKEYS, sizeof(char)*255*15);
 	for (int i=1; i<255; i++) {
 		lua_pushnumber(L, i);
 		lua_gettable(L, -2);
@@ -333,17 +335,21 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		WaitForSingleObject( gui.event_ready, 5000 );
 	}
 
-#ifndef _DEBUG
-	hhkLowLevelKeyboard  = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInstance, 0);
+//#ifndef _DEBUG
+	lua_getglobal(L, "KEYBOARD_HOOKS_DISABLED");
+	if (!lua_toboolean(L, -1)){
+		hhkLowLevelKeyboard = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInstance, 0);
+	}
 	//hhkLowLevelMouse  = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, hInstance, 0);
 	//hhkActivate =  SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)GetMsgProc, hInstance, 0);
-#endif
+//#endif
 
 	InitLua();
 
 	double pollingTimeout = 0.015;
 	double prevPollTime = 0;
 	double now = 0;
+	double lastDeviceCheck = 0;
 #ifndef XINPUT
 	HRESULT hr;
     // Create a DInput object
@@ -352,11 +358,11 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
     if( FAILED( hr = DirectInput8Create( GetModuleHandle( NULL ), DIRECTINPUT_VERSION,
                                          IID_IDirectInput8, ( VOID** )&g_pDI, NULL ) ) )
         return hr;
-	double lastDeviceCheck = 0;
 #else
 	DWORD prevPacketNumber = 0;
+	DWORD ControllerID = 0;
 	ZeroMemory( &g_ControllerState, sizeof(XINPUT_STATE) );
-
+	XINPUT_STATE prevControllerState;
 #endif
 	DWORD prevJoyButtonState = 0;
 	DWORD changedJoyButtons = 0;
@@ -398,7 +404,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 #ifndef XINPUT
 			if (g_pJoystick == NULL || FAILED( hr = g_pJoystick->Acquire()))  {
-				if (now > lastDeviceCheck + 2000){ //2s timeouts
+				if (now > lastDeviceCheck + 1){ //2s timeouts
 					lastDeviceCheck = now;
 					g_pJoystick = NULL;
 					hr = g_pDI->EnumDevices( DI8DEVCLASS_GAMECTRL, EnumJoysticksCallback, NULL, DIEDFL_ATTACHEDONLY );
@@ -411,7 +417,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				btnState=0;
 				for (int i = 0; i<32; i++) {
 					btnState = btnState >> 1;
-					btnState += js.rgbButtons[i] == 128 ? highestBit : 0;
+					if (js.rgbButtons[i] == 128) {
+						btnState += highestBit;
+					}
 				}
 
 				for (int i=0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++ )
@@ -437,7 +445,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			}
 #else
 			 //ZeroMemory( &ControllerState, sizeof(XINPUT_STATE) );
-			if (XInputGetState( 0, &g_ControllerState )  == ERROR_SUCCESS ) {
+			DWORD error = XInputGetState(ControllerID, &g_ControllerState);
+			if ( error  == ERROR_SUCCESS ) {
 				//if (g_ControllerState.dwPacketNumber != prevPacketNumber) {
 					prevPacketNumber = g_ControllerState.dwPacketNumber;
 
@@ -449,8 +458,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 					if (changedJoyButtons){
 						for (int btn=0;btn<20; btn++){
 							if (EXTRACTBIT(changedJoyButtons, btn)){
-								//printf("%d something\n", btn);
-								if (EXTRACTBIT(prevJoyButtonState, btn)){ //dunno why it's inverted
+								if (EXTRACTBIT(prevJoyButtonState, btn)){ // it's inverted
 									for (int i=0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++ )
 										FireEvent(L, events[JOYBUTTONDOWN][i], g_GamepadButtonNames[btn], btn+1, 0);
 								}else{
@@ -462,6 +470,10 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 					}
 				//}
 			} else {
+				if (error == ERROR_DEVICE_NOT_CONNECTED){
+					ControllerID++;
+					if (ControllerID > 3) ControllerID = 0;
+				}
 				//g_ControllerState.Gamepad. = NULL;
 			}
 #endif

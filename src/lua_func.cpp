@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <string>
 #include <hash_map>
+#include <vector>
 using namespace std;
 
 struct PLTIMER {
@@ -13,6 +14,7 @@ struct PLTIMER {
 };
 
 hash_map<std::string, PLTIMER> Timers;
+vector<HWND> wndList;
 
 lua_State *L = 0;
 
@@ -56,6 +58,13 @@ int CreateLua() {
 	lua_register(L, "GetJoyPosInfo", l_GetJoyPosInfo);
 	lua_register(L, "IsJoyButtonPressed", l_IsJoyButtonPressed);
 	lua_register(L, "SetGamepadVibration", l_SetGamepadVibration);
+	lua_register(L, "IsXInputEnabled", l_IsXInputEnabled);
+	lua_register(L, "AddMasterVolume", l_AddMasterVolume);
+	lua_register(L, "ToggleWindowTitle", l_ToggleWindowTitle);
+	lua_register(L, "GetClipboardText", l_GetClipboardText);
+	lua_register(L, "ListWindows", l_ListWindows);
+	lua_register(L, "GetWindowPos", l_GetWindowPos);
+	lua_register(L, "SetWindowPos", l_SetWindowPos);
 
 	lua_register(L, "CreateFrame", l_CreateFrame);
 	
@@ -245,10 +254,12 @@ static int l_Shutdown ( lua_State *luaVM ) {
 }
 static int l_GetWindowTitle( lua_State *luaVM ) {
 	char *Title = (char *)malloc(sizeof(char)*200);
-	GetWindowText(GetForegroundWindow(),Title,200);
+	HWND hwnd = GetForegroundWindow();
+	GetWindowText(hwnd,Title,200);
 	lua_pushstring(luaVM, Title);
+	lua_pushnumber(luaVM, (UINT32)hwnd);
 	free(Title);
-	return 1;
+	return 2;
 }
 
 static int l_RemoveMenu( lua_State *luaVM ) {
@@ -315,9 +326,9 @@ static int l_SetConsoleTextColor( lua_State *L ) {
 	if (r>1) r = 1; if (r<0) r = 0;
 	if (g>1) g = 1; if (g<0) g = 0;
 	if (b>1) b = 1; if (b<0) b = 0;
-	gui.text_r = (int)r*255;
-	gui.text_g = (int)g*255;
-	gui.text_b = (int)b*255;
+	gui.text_r = r;
+	gui.text_g = g;
+	gui.text_b = b;
 	return 0;
 }
 
@@ -424,7 +435,8 @@ int l_RegisterHotKey( lua_State *L ) {
 
 static int l_GetWindowProcess( lua_State *L ) {
 	unsigned long pid;
-	GetWindowThreadProcessId(GetForegroundWindow(), &pid);
+	HWND hwnd = GetForegroundWindow();
+	GetWindowThreadProcessId(hwnd, &pid);
 
 	HANDLE hProcess = OpenProcess( PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid );
 
@@ -440,8 +452,9 @@ static int l_GetWindowProcess( lua_State *L ) {
 				char *pname = (char *)malloc(sizeof(char)*200);
 				GetModuleBaseName( hProcess, hMod, pname, 200 );
 				lua_pushstring(L, pname);
+				lua_pushnumber(L, (UINT32)hwnd);
 				free(pname);
-				return 1;
+				return 2;
 			}
         }
     }
@@ -720,6 +733,178 @@ static int l_SetGamepadVibration( lua_State *L ) {
 		vibration.wLeftMotorSpeed = speed;
 	}
 	XInputSetState( 0, &vibration );
+//#else
+	//if (g_pJoystick == NULL) return 0;
+	//g_pJoystick->SendForceFeedbackCommand(
 #endif
 	return 0;
+}
+
+static int l_IsXInputEnabled( lua_State *L ) {
+#ifdef XINPUT
+	lua_pushboolean( L, 1);
+#else
+	lua_pushboolean( L, 0);
+#endif
+	return 1;
+}
+
+
+
+float AddMasterVolumeLevelScalar(float fMasterVolumeAdd, bool bAbsolute)
+{
+    IMMDeviceEnumerator *deviceEnumerator = NULL;
+    IMMDevice *defaultDevice = NULL;
+    IAudioEndpointVolume *endpointVolume = NULL;
+    HRESULT hr;
+    float fMasterVolume;
+    BOOL bSuccess = FALSE;
+	const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+	const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+	const IID IID_IAudioEndpointVolume = __uuidof(IAudioEndpointVolume);
+
+	hr = CoInitialize(NULL);
+
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void **)&deviceEnumerator);
+    if(SUCCEEDED(hr))
+    {
+        hr = deviceEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &defaultDevice);
+        if(SUCCEEDED(hr))
+        {
+            hr = defaultDevice->Activate(IID_IAudioEndpointVolume, CLSCTX_ALL, NULL, (void **)&endpointVolume);
+            if(SUCCEEDED(hr))
+            {
+                if(SUCCEEDED(endpointVolume->GetMasterVolumeLevelScalar(&fMasterVolume)))
+                {
+					if (!bAbsolute)
+						fMasterVolume += fMasterVolumeAdd;
+					else
+						fMasterVolume = fMasterVolumeAdd;
+
+                    if(fMasterVolume < 0.0)
+                        fMasterVolume = 0.0;
+                    else if(fMasterVolume > 1.0)
+                        fMasterVolume = 1.0;
+
+                    if(SUCCEEDED(endpointVolume->SetMasterVolumeLevelScalar(fMasterVolume, NULL)))
+                        bSuccess = TRUE;
+                }
+                endpointVolume->Release();
+            }
+            defaultDevice->Release();
+        }
+        deviceEnumerator->Release();
+    }
+
+	CoUninitialize();
+
+	return fMasterVolume;
+}
+
+
+static int l_AddMasterVolume( lua_State *L ) {
+	float d = luaL_checknumber(L, 1);
+	bool bAbsolute = false;
+	if (lua_isboolean(L,2))
+		if (lua_toboolean(L,2) == 1)
+			bAbsolute = true;
+
+	lua_pushnumber(L, AddMasterVolumeLevelScalar(d, bAbsolute));
+	return 1;
+}
+
+
+static int l_ToggleWindowTitle(lua_State *L) {
+	HWND hwnd = GetForegroundWindow();
+	SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) ^ WS_CAPTION);
+	return 0;
+}
+
+static int l_GetClipboardText(lua_State *L) {
+	if (OpenClipboard(NULL)){
+		//printf("Opened Clipboard\n");
+		HGLOBAL hglb = GetClipboardData(CF_UNICODETEXT);
+		LPWSTR wstr = 0;
+		wstr = (LPWSTR)GlobalLock(hglb);
+		GlobalUnlock(hglb);
+		CloseClipboard();
+		if (wstr) {
+			char *str = (char *)malloc(sizeof(char) * 1000);
+			wcstombs(str,wstr, 1000);
+			//printf("%s\n", str);
+			lua_pushstring(L, str);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam){
+	vector<HWND> *winList = (vector<HWND>*)lParam;
+	winList->push_back(hwnd);
+	return true;
+}
+
+static int l_ListWindows(lua_State *L){
+	vector<HWND> winList;
+	EnumWindows(EnumWindowsProc, (LPARAM)&winList);
+	char *title = (char *)malloc(sizeof(char) * 200);
+
+	lua_newtable(L);
+
+	WINDOWINFO winfo;
+	for (std::vector<HWND>::size_type i = 0; i != winList.size(); i++) {
+		/* std::cout << someVector[i]; ... */
+		HWND hwnd = winList[i];
+		GetWindowText(hwnd, title, 200);
+
+		/*
+		ZeroMemory(&winfo, sizeof(WINDOWINFO));
+		winfo.cbSize = sizeof(WINDOWINFO);
+		GetWindowInfo(hwnd, &winfo);
+		printf("title: %s    w:%i h:%i\n", title, winfo.rcWindow.bottom - winfo.rcWindow.top, winfo.rcWindow.right - winfo.rcWindow.left);
+		*/
+		//printf("")
+		if ((!title[0]) ||
+			(!strcmp(title, "Default IME")) ||
+			(!strcmp(title, "MSCTFIME UI")) ||
+			(!strcmp(title, "GDI+ Window")) ||
+			(!strcmp(title, "Msg")))
+			continue;
+
+		lua_pushnumber(L, (UINT32)hwnd);
+		lua_pushstring(L, title);
+		lua_settable(L, -3);
+	}
+
+	free(title);
+	return 1;
+}
+
+static int l_GetWindowPos(lua_State *L){
+	UINT32 hwndInt = luaL_checknumber(L, 1);
+	HWND hwnd = (HWND)hwndInt;
+	if (!IsWindow(hwnd)) return 0;
+	RECT rc;
+	GetWindowRect(hwnd, &rc);
+	lua_pushnumber(L, rc.left);
+	lua_pushnumber(L, rc.top);
+	lua_pushnumber(L, rc.right-rc.left);
+	lua_pushnumber(L, rc.bottom - rc.top);
+	return 4;
+}
+
+static int l_SetWindowPos(lua_State *L){
+	UINT32 hwndInt = luaL_checknumber(L, 1);
+	HWND hwnd = (HWND)hwndInt;
+	int x = luaL_checknumber(L, 2);
+	int y = luaL_checknumber(L, 3);
+	int width = luaL_checknumber(L, 4);
+	int height = luaL_checknumber(L, 5);
+
+	if (!IsWindow(hwnd)) return 0;
+
+	SetWindowPos(hwnd, NULL, x, y, width, height, SWP_NOACTIVATE|SWP_NOZORDER);
+	lua_pushboolean(L, 1);
+	return 1;
 }

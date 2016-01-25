@@ -1,4 +1,8 @@
 bin/*
+src/luasocket/gem
+src/luasocket/doc
+src/luasocket/samples
+src/luasocket/test
 obj
 test
 ipch

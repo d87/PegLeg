@@ -3,6 +3,7 @@ RegisterEvent("OnCreate",function ()
     print("PegLeg started.")
 --~     console.Show()
 --~     print ("Edit config.lua to change configuration and disable console on startup")
+    ListWindows()
 end)
 
 local timeout = {}

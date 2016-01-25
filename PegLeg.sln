@@ -1,9 +1,26 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PegLeg", "PegLeg.vcxproj", "{35274DEC-8184-48EE-A6DB-CD8D2896AD41}"
+	ProjectSection(ProjectDependencies) = postProject
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A} = {66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}
+		{368FFE21-36AA-4665-B2C3-47DE38A210A8} = {368FFE21-36AA-4665-B2C3-47DE38A210A8}
+		{128E8BD0-174A-48F0-8771-92B1E8D18713} = {128E8BD0-174A-48F0-8771-92B1E8D18713}
+	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua5.2_lib", "src\lua\lua5.2_lib.vcxproj", "{368FFE21-36AA-4665-B2C3-47DE38A210A8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua5.2", "src\lua\lua5.2_lib.vcxproj", "{368FFE21-36AA-4665-B2C3-47DE38A210A8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "socket", "src\luasocket\socket.vcxproj", "{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{368FFE21-36AA-4665-B2C3-47DE38A210A8} = {368FFE21-36AA-4665-B2C3-47DE38A210A8}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mime", "src\luasocket\mime.vcxproj", "{128E8BD0-174A-48F0-8771-92B1E8D18713}"
+	ProjectSection(ProjectDependencies) = postProject
+		{368FFE21-36AA-4665-B2C3-47DE38A210A8} = {368FFE21-36AA-4665-B2C3-47DE38A210A8}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +56,30 @@ Global
 		{368FFE21-36AA-4665-B2C3-47DE38A210A8}.Release|Win32.Build.0 = Release|Win32
 		{368FFE21-36AA-4665-B2C3-47DE38A210A8}.Release|x64.ActiveCfg = Release|x64
 		{368FFE21-36AA-4665-B2C3-47DE38A210A8}.Release|x64.Build.0 = Release|x64
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Debug|Win32.Build.0 = Debug|Win32
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Debug|x64.ActiveCfg = Debug|x64
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Debug|x64.Build.0 = Debug|x64
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Release|Win32.ActiveCfg = Release|Win32
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Release|Win32.Build.0 = Release|Win32
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Release|x64.ActiveCfg = Release|x64
+		{66E3CE14-884D-4AEA-9F20-15A0BEAF8C5A}.Release|x64.Build.0 = Release|x64
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Debug|Win32.ActiveCfg = Debug|Win32
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Debug|Win32.Build.0 = Debug|Win32
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Debug|x64.ActiveCfg = Debug|x64
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Debug|x64.Build.0 = Debug|x64
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Release|Win32.ActiveCfg = Release|Win32
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Release|Win32.Build.0 = Release|Win32
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Release|x64.ActiveCfg = Release|x64
+		{128E8BD0-174A-48F0-8771-92B1E8D18713}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

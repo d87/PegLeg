@@ -9,6 +9,8 @@ extern "C" {
 #include <windows.h>
 #include <psapi.h>
 #include <richedit.h>
+#include <Mmdeviceapi.h>
+#include <Endpointvolume.h>
 
 #include "gui.h"
 #include "inputemu.h"
@@ -65,5 +67,12 @@ int l_TurnOffMonitor( lua_State *L);
 int l_GetJoyPosInfo( lua_State *L);
 int l_IsJoyButtonPressed( lua_State *L);
 int l_SetGamepadVibration( lua_State *L);
+int l_IsXInputEnabled( lua_State *L);
+int l_AddMasterVolume( lua_State *L);
+int l_ToggleWindowTitle( lua_State *L );
+int l_GetClipboardText( lua_State *L );
+int l_ListWindows(lua_State *L);
+int l_GetWindowPos(lua_State *L);
+int l_SetWindowPos(lua_State *L);
 
 #endif

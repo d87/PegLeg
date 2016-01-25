@@ -16,7 +16,7 @@
 
 #define RELOADLUA 0xAAA
 
-//#define XINPUT
+#define XINPUT
 
 #ifndef XINPUT
 
@@ -28,10 +28,11 @@
 #else
 
 #include <Xinput.h>
-#pragma comment( lib, "XINPUT.lib" )
-//#pragma comment( lib, "XINPUT9_1_0.LIB" ) // for vs2012 sdk
+//#pragma comment( lib, "XINPUT.lib" )
+#pragma comment( lib, "XINPUT9_1_0.LIB" ) // for vs2012 sdk
 
 #endif
+
 struct enum_struct {
 //	int type;
 	char *pattern;

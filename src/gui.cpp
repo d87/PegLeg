@@ -9,8 +9,8 @@
 
 extern int Shutdown();
 
-//gui_struct *gui = 0;
 struct gui_struct gui;
+UINT mTaskbarCreated;
 
 //int WINAPI WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nCmdShow )
 void guiThread( void *param  )
@@ -20,6 +20,7 @@ void guiThread( void *param  )
 
 	WNDCLASSEX wc;
 	LoadLibrary("RichEd20.dll");
+	//LoadLibrary("Msftedit.dll");
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style  = 0;
 	wc.lpfnWndProc = WndProc ;
@@ -34,7 +35,6 @@ void guiThread( void *param  )
 	wc.lpszClassName = "PegLegWnd";
 	wc.hIconSm       = LoadIcon(NULL,IDI_APPLICATION);
 
-	//gr?
 	if(!RegisterClassEx(&wc)) {
         	MessageBox(NULL , "Failed to register window class" , "Error" , MB_ICONEXCLAMATION | MB_OK );
  	        return;
@@ -62,7 +62,7 @@ void guiThread( void *param  )
 	UpdateWindow(gui.hwndConsole);
 	SetEvent(gui.event_ready);
 	
-
+	mTaskbarCreated = RegisterWindowMessageW(L"TaskbarCreated"); //when explorer crashes it will restore tray icon
 	MSG Msg;
 	while(GetMessage(&Msg,NULL,0,0)) {	
 		TranslateMessage(&Msg);
@@ -70,6 +70,21 @@ void guiThread( void *param  )
 	}
 
 	return;
+}
+
+int InstallTrayIcon(HWND hwnd){
+	if (!gui.createtray) return 1;
+	NOTIFYICONDATA dta;
+	dta.cbSize = sizeof(NOTIFYICONDATA);
+	dta.hWnd = hwnd;
+	dta.uID = ID_TRAY;
+	dta.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+	dta.uCallbackMessage = WM_SHELLNOTIFY;
+	dta.hIcon = LoadIcon(gui.hInstance, MAKEINTRESOURCE(ID_ICON1));
+	strcpy(dta.szTip, "PegLeg");
+	Shell_NotifyIcon(NIM_ADD, &dta);
+
+	return 1;
 }
 
 int OnCreate( HWND hwnd)
@@ -80,7 +95,7 @@ int OnCreate( HWND hwnd)
 		NULL,
 		WS_CHILD|WS_VISIBLE|ES_READONLY|ES_MULTILINE|WS_VSCROLL|ES_NOHIDESEL,
 		0, 0,
-		gui.width, gui.height,
+		gui.width+3, gui.height-25,
 		hwnd,
 		0,
 		0,
@@ -89,22 +104,13 @@ int OnCreate( HWND hwnd)
 
 	//tray
 	if (gui.createtray) {
-	NOTIFYICONDATA dta;
+		gui.hmenuTray = CreatePopupMenu();
+		AppendMenu(gui.hmenuTray, MF_STRING, ID_SHOWCONSOLE, "&Show Console");
+		AppendMenu(gui.hmenuTray, MF_STRING, ID_RELOAD, "&Reload");
+		AppendMenu(gui.hmenuTray, MF_STRING, ID_HIDECONSOLE, "&Hide Console");
+		AppendMenu(gui.hmenuTray, MF_STRING, ID_EXIT, "E&xit");
 
-	gui.hmenuTray = CreatePopupMenu();
-	AppendMenu(gui.hmenuTray, MF_STRING, ID_SHOWCONSOLE, "&Show Console");
-	AppendMenu(gui.hmenuTray, MF_STRING, ID_RELOAD, "&Reload");
-	AppendMenu(gui.hmenuTray, MF_STRING, ID_HIDECONSOLE, "&Hide Console");
-	AppendMenu(gui.hmenuTray, MF_STRING, ID_EXIT, "E&xit");
-
-	dta.cbSize = sizeof(NOTIFYICONDATA);
-	dta.hWnd = hwnd;
-	dta.uID = ID_TRAY;
-	dta.uFlags = NIF_ICON|NIF_MESSAGE|NIF_TIP;
-	dta.uCallbackMessage = WM_SHELLNOTIFY;
-	dta.hIcon = LoadIcon(gui.hInstance, MAKEINTRESOURCE(ID_ICON1));
-	strcpy(dta.szTip, "PegLeg");
-	Shell_NotifyIcon(NIM_ADD, &dta);
+		InstallTrayIcon(hwnd);
 	}
 	return 1;
 }
@@ -162,6 +168,10 @@ static int OnHotkey(HWND hwnd , WPARAM wParam , LPARAM lParam) {
 LRESULT CALLBACK WndProc (HWND hwnd , UINT msg,WPARAM wParam , LPARAM lParam)
 {
 	//COLORREF clr = RGB(0, 0, 0);
+	if (msg == mTaskbarCreated){
+		InstallTrayIcon(hwnd);
+		return 0;
+	}
 	switch(msg) {
 		
 		case WM_CREATE:
@@ -183,12 +193,11 @@ LRESULT CALLBACK WndProc (HWND hwnd , UINT msg,WPARAM wParam , LPARAM lParam)
 			return OnShellNotify(hwnd, wParam, lParam);
 	}
 	return DefWindowProc(hwnd,msg,wParam,lParam);
-	//return 0;
 }
 
 void guiAddText(const char *str)
 {
-	COLORREF clr = RGB(gui.text_r,gui.text_g,gui.text_b);
+	COLORREF clr = RGB(gui.text_r*255,gui.text_g*255,gui.text_b*255);
 	int start_lines, text_length, end_lines;
 	CHARRANGE cr;
 	CHARRANGE ds;
@@ -197,7 +206,8 @@ void guiAddText(const char *str)
 	
 	if ( text_length >30000 ) {
 		ds.cpMin = 0;
-		ds.cpMax = text_length - 30000;
+		//ds.cpMax = text_length - 30000;
+		ds.cpMax = 10000;
 		SendMessage(gui.hwndConsole, EM_EXSETSEL, 0, (LPARAM)&ds);
 		SendMessage(gui.hwndConsole, EM_REPLACESEL, FALSE, 0);
 	}
@@ -209,10 +219,10 @@ void guiAddText(const char *str)
 	
 	fmt.cbSize = sizeof(CHARFORMAT);
 	fmt.dwMask = CFM_COLOR|CFM_FACE|CFM_SIZE|CFM_BOLD|CFM_ITALIC|CFM_STRIKEOUT|CFM_UNDERLINE;
-	fmt.yHeight = 160;
+	fmt.yHeight = 200;
 	fmt.dwEffects = 0;
 	fmt.crTextColor = clr;
-	strcpy(fmt.szFaceName,"Courier New");
+	strcpy(fmt.szFaceName,"Consolas");
 	
 	SendMessage(gui.hwndConsole, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&fmt);
 	SendMessage(gui.hwndConsole, EM_REPLACESEL, FALSE, (LPARAM)str);

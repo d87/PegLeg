@@ -67,6 +67,7 @@ int MouseInput(char *eventname, int x, int y, int isabsolute) {
 	int mouseData = 0;
 	if		(!strcmp(_strupr(eventname),"LEFTDOWN")) eventflag = MOUSEEVENTF_LEFTDOWN;
 	else if (!strcmp(_strupr(eventname),"LEFTUP")) eventflag = MOUSEEVENTF_LEFTUP;
+	else if (!strcmp(_strupr(eventname),"LEFT")) eventflag = MOUSEEVENTF_LEFTDOWN|MOUSEEVENTF_LEFTUP;
 	else if (!strcmp(_strupr(eventname),"RIGHTDOWN")) eventflag = MOUSEEVENTF_RIGHTDOWN;
 	else if (!strcmp(_strupr(eventname),"RIGHTUP")) eventflag = MOUSEEVENTF_RIGHTUP;
 	else if (!strcmp(_strupr(eventname),"MOVE")) eventflag = MOUSEEVENTF_MOVE;
