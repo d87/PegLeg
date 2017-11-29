@@ -3,7 +3,7 @@
 
 #include <cstdlib>
 #include <string>
-#include <hash_map>
+#include <unordered_map>
 #include <vector>
 using namespace std;
 
@@ -13,7 +13,7 @@ struct PLTIMER {
 	unsigned int luaFuncRef;
 };
 
-hash_map<std::string, PLTIMER> Timers;
+unordered_map<std::string, PLTIMER> Timers;
 vector<HWND> wndList;
 
 lua_State *L = 0;
@@ -42,7 +42,6 @@ int CreateLua() {
 	lua_register(L, "KeyboardInput", l_KeyboardInput);
 	lua_register(L, "GetCursorPos", l_GetCursorPos);
 	lua_register(L, "IsPressed", l_IsPressed);
-	lua_register(L, "ShowWindow", l_ShowWindow);
 	lua_register(L, "RegisterHotKey", l_RegisterHotKey);
 	lua_register(L, "GetWindowProcess", l_GetWindowProcess);
 	lua_register(L, "CreateTimer", l_CreateTimer);
@@ -65,6 +64,12 @@ int CreateLua() {
 	lua_register(L, "ListWindows", l_ListWindows);
 	lua_register(L, "GetWindowPos", l_GetWindowPos);
 	lua_register(L, "SetWindowPos", l_SetWindowPos);
+	lua_register(L, "ShowWindow", l_ShowWindow);
+	lua_register(L, "GetMouseSpeed", l_GetMouseSpeed);
+	lua_register(L, "SetMouseSpeed", l_SetMouseSpeed);
+
+	lua_register(L, "GetSelectedGamepad", l_GetSelectedGamepad);
+	lua_register(L, "SelectGamepad", l_SelectGamepad);
 
 	lua_register(L, "CreateFrame", l_CreateFrame);
 	
@@ -385,6 +390,7 @@ int __stdcall EWProc(HWND hwnd,LPARAM lParam)
 	}
 	return 1;
 }
+/*
 static int l_ShowWindow( lua_State *L ) {
 	const char *title = luaL_checkstring(L, 1);
 	struct enum_struct wData;
@@ -399,7 +405,7 @@ static int l_ShowWindow( lua_State *L ) {
 
 	//BringWindowToTop(wData.hwndReturned);
 	return 1;
-}
+}*/
 
 
 int ParseModifiers(char *ptr) {
@@ -732,7 +738,7 @@ static int l_SetGamepadVibration( lua_State *L ) {
 		vibration.wRightMotorSpeed = speed;
 		vibration.wLeftMotorSpeed = speed;
 	}
-	XInputSetState( 0, &vibration );
+	XInputSetState( ControllerID, &vibration );
 //#else
 	//if (g_pJoystick == NULL) return 0;
 	//g_pJoystick->SendForceFeedbackCommand(
@@ -907,4 +913,53 @@ static int l_SetWindowPos(lua_State *L){
 	SetWindowPos(hwnd, NULL, x, y, width, height, SWP_NOACTIVATE|SWP_NOZORDER);
 	lua_pushboolean(L, 1);
 	return 1;
+}
+
+static int l_ShowWindow(lua_State *L){
+	const char * fs = luaL_checkstring(L, 1);
+	unsigned int mods = 0;
+	char *ptr = (char *)fs;
+	while (*ptr) {
+		if (!strncmp(ptr, "SW_MAXIMIZE", 11)) { mods |= SW_MAXIMIZE; ptr += 11; }
+		if (!strncmp(ptr, "SW_MINIMIZE", 11)) { mods |= SW_MINIMIZE;  ptr += 11; }
+		if (!strncmp(ptr, "SW_RESTORE", 10)) { mods |= SW_RESTORE;  ptr += 10; }
+		ptr++;
+	}
+
+	HWND hwnd = GetForegroundWindow();
+	ShowWindow(hwnd, mods);
+	return 0;
+}
+
+static int l_GetMouseSpeed(lua_State *L){
+	int MouseSpeed = 0;
+	SystemParametersInfo(SPI_GETMOUSESPEED, 0, &MouseSpeed, 0);
+	lua_pushnumber(L, MouseSpeed);
+	return 1;
+}
+
+static int l_SetMouseSpeed(lua_State *L){
+	const int newMouseSpeed = luaL_checknumber(L, 1);
+	if (newMouseSpeed < 1 || newMouseSpeed > 20) {
+		error(L, "Mouse Speed should range between 1 and 20: passed %s\r\n", lua_tostring(L, -1));
+		return 0;
+	}
+	SystemParametersInfo(SPI_SETMOUSESPEED, 0, (PVOID)newMouseSpeed, SPIF_UPDATEINIFILE||SPIF_SENDCHANGE);
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int l_GetSelectedGamepad(lua_State *L) {
+	lua_pushnumber(L, ControllerID+1);
+	return 1;
+}
+
+static int l_SelectGamepad(lua_State *L) {
+	const DWORD newGamepadID = luaL_checknumber(L, 1);
+	if (newGamepadID > 0 && newGamepadID <= 5) {
+		ControllerID = newGamepadID - 1;
+		lua_pushnumber(L, ControllerID + 1);
+		return 1;
+	}
+	return 0;
 }

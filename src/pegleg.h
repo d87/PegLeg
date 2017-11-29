@@ -59,6 +59,7 @@ extern DWORD btnState;
 
 //#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE 9000
 extern XINPUT_STATE g_ControllerState;
+extern DWORD ControllerID;
 #endif
 extern char *g_GamepadButtonNames[17];
 

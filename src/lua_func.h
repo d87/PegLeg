@@ -49,7 +49,6 @@ int l_IsPressed( lua_State *L );
 int l_GetCursorPos( lua_State *L );
 int l_KeyboardInput( lua_State *L);
 int l_MouseInput( lua_State *L);
-int l_ShowWindow( lua_State *L );
 int l_RegisterHotKey( lua_State *L );
 int l_CreateTimer( lua_State *L );
 int l_KillTimer( lua_State *L );
@@ -74,5 +73,10 @@ int l_GetClipboardText( lua_State *L );
 int l_ListWindows(lua_State *L);
 int l_GetWindowPos(lua_State *L);
 int l_SetWindowPos(lua_State *L);
+int l_ShowWindow(lua_State *L);
+int l_GetMouseSpeed(lua_State *L);
+int l_SetMouseSpeed(lua_State *L);
+int l_GetSelectedGamepad(lua_State *L);
+int l_SelectGamepad(lua_State *L);
 
 #endif

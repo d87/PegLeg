@@ -29,6 +29,8 @@ HINSTANCE g_hInstance;
 HHOOK hhkLowLevelKeyboard = 0;
 HHOOK hhkLowLevelMouse = 0;
 HHOOK hhkActivate = 0;
+
+DWORD ControllerID = 0;
 #ifndef XINPUT
 
 //#define DIRECTINPUT_VERSION 0x0800
@@ -360,7 +362,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
         return hr;
 #else
 	DWORD prevPacketNumber = 0;
-	DWORD ControllerID = 0;
 	ZeroMemory( &g_ControllerState, sizeof(XINPUT_STATE) );
 	XINPUT_STATE prevControllerState;
 #endif
@@ -471,8 +472,11 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				//}
 			} else {
 				if (error == ERROR_DEVICE_NOT_CONNECTED){
-					ControllerID++;
-					if (ControllerID > 3) ControllerID = 0;
+					for (int i = 0; i < XUSER_MAX_COUNT; i++) {
+						DWORD error = XInputGetState(i, &g_ControllerState);
+						if (error == ERROR_SUCCESS)
+							ControllerID = i;
+					}
 				}
 				//g_ControllerState.Gamepad. = NULL;
 			}
