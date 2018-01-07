@@ -31,10 +31,13 @@ int REPL::EvalTop() {
 		std::string str(reqBytes + 1, 0);
 		WideCharToMultiByte(CP_UTF8, 0, evalstr.c_str(), strLen, &str[0], reqBytes, NULL, NULL);
 
-		//luaL_dostring(L, str);
-		luaL_loadstring(L, str.c_str());
-		if (lua_pcall(L, 0, 0, 0) != 0)
-			error(L, "error running function: %s", lua_tostring(L, -1));
+		if (luaL_loadstring(L, str.c_str()) == LUA_OK) {
+			if (lua_pcall(L, 0, 0, 0) != 0)
+				error(L, "error running function: %s", lua_tostring(L, -1));
+		}
+		else {
+			error(L, "error compiling chunk: %s", lua_tostring(L, -1));
+		}
 	}
 	return 1;
 }
