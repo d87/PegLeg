@@ -66,10 +66,13 @@ void guiThread( void *param  )
 	
 	WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated"); //when explorer crashes it will restore tray icon
 	MSG Msg;
-	while(GetMessage(&Msg,NULL,0,0)) {	
+	BOOL bRet;
+	while((bRet = GetMessage(&Msg, NULL, 0, 0)) != 0) {
 		TranslateMessage(&Msg);
 		DispatchMessage (&Msg);
 	}
+
+	PostThreadMessage(mainThreadId, WM_QUIT, 0, 0);
 
 	return;
 }
@@ -202,8 +205,9 @@ static void OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam)
 
 	UINT id = (UINT)wParam;
 
-	if( id == ID_EXIT ) {
-		Shutdown();
+	if (id == ID_EXIT) {
+		//Shutdown();
+		DestroyWindow(gui.hwnd);
 	}
 	else if (id == ID_SHOWCONSOLE )
 		ShowWindow(gui.hwnd, SW_SHOW);
@@ -251,7 +255,8 @@ LRESULT CALLBACK WndProc (HWND hwnd , UINT msg,WPARAM wParam , LPARAM lParam)
 			OnHotkey(hwnd, wParam, lParam);
 			break;
 		case WM_DESTROY:
-			PostQuitMessage(0);
+			KillTrayIcon(hwnd);
+			PostQuitMessage(1);
 			break;
 		case WM_COMMAND:
 			OnCommand(hwnd, wParam, lParam);

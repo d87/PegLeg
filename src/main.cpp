@@ -110,12 +110,12 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 					break;
 				}
 
-			/*case WM_MOUSEMOVE:
-				{
-					trig = MMOVE;
-					btn = 0xFF;
-					break;
-				}*/
+			//case WM_MOUSEMOVE:
+				//{
+					//trig = MMOVE;
+					//btn = 0xFF;
+					//break;
+				//}
 		}
 		if (trig != -1){
 			PMSLLHOOKSTRUCT p = (PMSLLHOOKSTRUCT) lParam;
@@ -153,14 +153,14 @@ void error (lua_State *L, const char *fmt, ...) {
 
 int Shutdown() {
 #ifndef _DEBUG
-	UnhookWindowsHookEx(hhkLowLevelKeyboard);
+	//UnhookWindowsHookEx(hhkLowLevelKeyboard);
 	//UnhookWindowsHookEx(hhkLowLevelMouse);
 #endif
-	if (gui.createtray)
-		KillTrayIcon(gui.hwnd);
+	//if (gui.createtray)
+		//KillTrayIcon(gui.hwnd);  //it's killed together with console window
 	if (gui.hwnd)
 		DestroyWindow  (gui.hwnd);
-	exit(1);
+	PostQuitMessage(0);
 	return 1;
 }
 
@@ -238,7 +238,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	lua_close(L);
 	
 
-
 	CreateLua();
 
 	LoadScript(L, "pegleg.conf.lua");
@@ -287,32 +286,27 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	
 
 
-
+	BOOL isDone = false;
 	MSG msg;
-	while(1){
+	while(!isDone){
 		//while (GetMessage(&msg, NULL, 0, 0) != 0) {
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			if (msg.message == WM_HOTKEY)
-				FireEvent(L, events[HOTKEY][(int)msg.wParam], 0, 0, 0);
-			/*else if (msg.message == WM_TIMER) {
-				int tID = (int)msg.wParam;
-				int i = 0;
-				char str[255];
-				sprintf(str, ">>> %i, %i", tID, i);
-				guiAddText(str);
-				for (; timerMap[i]; i++)
-					if (timerMap[i] == tID) {
-						FireEvent(L, events[TIMER][i], 0, 0, 0);
-						break;
-					}
-			}*/
-			else if (msg.message == WM_COMMAND){
-				int cmdID = (int)msg.wParam;
-				if (cmdID == RELOADLUA)
-					ReloadLua();
-				if (cmdID == REPL_EVAL)
-					repl->EvalTop();
+			switch (msg.message) {
+				case WM_HOTKEY:
+					FireEvent(L, events[HOTKEY][(int)msg.wParam], 0, 0, 0);
+					break;
+				case WM_COMMAND:
+					int cmdID;
+					cmdID = (int)msg.wParam;
+					if (cmdID == RELOADLUA)
+						ReloadLua();
+					if (cmdID == REPL_EVAL)
+						repl->EvalTop();
+					break;
+				case WM_QUIT:
+					isDone = true;
 			}
+
 			//TranslateMessage(&msg);
 			//DispatchMessage(&msg);
 		}
@@ -331,12 +325,19 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 #ifndef _DEBUG
 	UnhookWindowsHookEx(hhkLowLevelKeyboard);
-	EnableMouseHooks(0);
 	//UnhookWindowsHookEx(hhkLowLevelMouse);
 #endif
 
+	// tray exit command destroys console window
+	// it destroys tray icon on cleanup
+	// gui message loop ends
+	// WM_QUIT sent to main thread
+	// end up here
+
 	soundplayer->Release();
 	lua_close(L);
+
+	exit(1);
 
 	return 1;
 }
