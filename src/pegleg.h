@@ -25,6 +25,7 @@
 
 #include "soundplayer.h"
 #include "gamepad.h"
+#include "repl.h"
 #include "lua_func.h"
 
 

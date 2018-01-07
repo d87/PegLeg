@@ -14,9 +14,6 @@ extern "C" {
 #include <Mmdeviceapi.h>
 #include <Endpointvolume.h>
 
-#include <string>
-#include <queue>
-
 #include "gui.h"
 #include "inputemu.h"
 
@@ -85,18 +82,7 @@ int l_GetSelectedGamepad(lua_State *L);
 int l_SelectGamepad(lua_State *L);
 int l_PlaySound(lua_State *L);
 
-using namespace std;
 
-class REPL {
-private:
-	queue<wstring> replque;
-	SRWLOCK lock;
-
-public:
-	REPL();
-	int Enqueue(WCHAR *str);
-	int EvalTop();
-};
 
 
 #endif

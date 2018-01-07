@@ -17,6 +17,7 @@ extern "C" {
 #include "lua_func.h"
 #include "soundplayer.h"
 #include "gamepad.h"
+#include "repl.h"
 #include <richedit.h>
 
 #pragma comment( lib, "lua5.2.lib" )
@@ -217,8 +218,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	*stdout = *fp;
 	setvbuf( stdout, NULL, _IONBF, 0 );
 #endif
-
-	setlocale(LC_ALL, "");
 
 	mainThreadId = GetCurrentThreadId();
 	g_hInstance = hInstance;

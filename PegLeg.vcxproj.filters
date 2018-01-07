@@ -8,6 +8,7 @@
     <ClCompile Include="src\onscreendisplay.cpp" />
     <ClCompile Include="src\soundplayer.cpp" />
     <ClCompile Include="src\gamepad.cpp" />
+    <ClCompile Include="src\repl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\soundplayer.h" />
@@ -17,6 +18,7 @@
     <ClInclude Include="src\lua_func.h" />
     <ClInclude Include="src\pegleg.h" />
     <ClInclude Include="src\res.h" />
+    <ClInclude Include="src\repl.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\res.rc" />
