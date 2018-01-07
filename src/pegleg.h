@@ -27,20 +27,11 @@
 #include "gamepad.h"
 #include "lua_func.h"
 
-#ifndef XINPUT
-
-#include <dinput.h>
-#include <dinputd.h>
-#pragma comment( lib, "dinput8.lib")
-#pragma comment( lib, "dxguid.lib")
-
-#else
 
 #include <Xinput.h>
 //#pragma comment( lib, "XINPUT.lib" )
 #pragma comment( lib, "XINPUT9_1_0.LIB" ) // for vs2012 sdk
 
-#endif
 
 struct enum_struct {
 //	int type;
@@ -57,15 +48,6 @@ struct event_arglist {
 	int scanCode;
 };
 
-
-#ifndef XINPUT
-extern JOYINFOEX g_joyInfo[4];
-extern DIJOYSTATE2 js;
-extern LPDIRECTINPUT8          g_pDI;
-extern LPDIRECTINPUTDEVICE8    g_pJoystick;
-extern DWORD btnState;
-extern char *g_GamepadButtonNames[17];
-#endif
 
 extern int events[12][MAX_EVENTS];
 extern int timerMap[MAX_EVENTS];

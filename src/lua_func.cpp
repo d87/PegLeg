@@ -660,25 +660,6 @@ static int l_TurnOffMonitor( lua_State *L ) {
 }
 
 static int l_GetJoyPosInfo ( lua_State *L ) {
-#ifndef XINPUT
-	// POV, X, Y, Z, R, U
-	if (g_pJoystick == NULL) return 0;
-
-	DWORD POV = js.rgdwPOV[0];
-	if (POV  == JOY_POVCENTERED || LOWORD(POV) == 0xFFFF) lua_pushstring ( L, "CENTERED");
-	else if (POV  == JOY_POVBACKWARD) lua_pushstring ( L, "DOWN");
-	else if (POV  == JOY_POVFORWARD) lua_pushstring ( L, "UP");
-	else if (POV  == JOY_POVLEFT) lua_pushstring ( L, "LEFT");
-	else if (POV  == JOY_POVRIGHT) lua_pushstring ( L, "RIGHT");
-	lua_pushnumber ( L, js.lX*100/0xFFFF);
-	lua_pushnumber ( L, js.lY*100/0xFFFF);
-	lua_pushnumber ( L, js.lZ*100/0xFFFF);
-	lua_pushnumber ( L, js.lRx*100/0xFFFF);
-	lua_pushnumber ( L, js.lRy*100/0xFFFF);
-	lua_pushnumber ( L, js.lRz*100/0xFFFF);
-
-	return 7;
-#else
 	if (g_gamepadGroup->activeGamepad != NULL) {
 		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbLX * 100 / 0xFFFF);
 		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbLY * 100 / 0xFFFF);
@@ -690,31 +671,9 @@ static int l_GetJoyPosInfo ( lua_State *L ) {
 		return 7;
 	}
 	return 0;
-#endif
 }
 
 static int l_IsJoyButtonPressed ( lua_State *L ) {
-#ifndef XINPUT
-	if (g_pJoystick == NULL) return 0;
-
-	int buttonID = -1;
-	if (lua_isstring(L, 1)) {
-		const char* btnName = (const char*) luaL_checkstring(L, 1);
-		for (int i=0; g_GamepadButtonNames[i]; i++)
-			if (!strcmp(_strupr((char*)btnName), g_GamepadButtonNames[i]))
-				buttonID = i;
-	} else {
-		buttonID = luaL_checkinteger(L, 1) - 1;
-	}
-
-	//printf("jid %d buttons %d buttonid %d", jid, g_joyInfo[jid].dwButtons, buttonID);
-
-	if (buttonID > -1)
-		lua_pushboolean(L, (btnState >> buttonID) &1);
-	else
-		lua_pushnil(L);
-	return 1;
-#else
 	const char* btnName = (const char*) luaL_checkstring(L, 1);
 		
 	if (g_gamepadGroup->activeGamepad)
@@ -722,7 +681,6 @@ static int l_IsJoyButtonPressed ( lua_State *L ) {
 	else
 		lua_pushnil(L);
 	return 1;
-#endif
 }
 
 static int l_SetGamepadVibration( lua_State *L ) {

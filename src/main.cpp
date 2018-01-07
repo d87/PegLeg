@@ -38,36 +38,6 @@ SoundPlayer *soundplayer;
 GamepadGroup *g_gamepadGroup;
 REPL *repl;
 
-#ifndef XINPUT
-
-//#define DIRECTINPUT_VERSION 0x0800
-LPDIRECTINPUT8 g_pDI;
-LPDIRECTINPUTDEVICE8 g_pJoystick;
-
-DIJOYSTATE2 js;
-DWORD btnState;
-char *g_GamepadButtonNames[17] = {
-	"X", //Rect
-	"A", //Cross
-	"B", //Circle
-	"Y", //Triangle
-	"L1",
-	"R1",
-	"L2", //X rot
-	"R2", //Y rot
-	"BACK", //Select, Share
-	"START", //Options
-	"LS",
-	"RS",
-	"PS",
-	"TOUCHPAD",
-	(char)NULL
-};
-
-
-
-#endif
-
 int mainThreadId;
 
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
@@ -234,27 +204,6 @@ void EnableMouseHooks(bool enable){
 	}
 }
 
-#ifndef XINPUT
-BOOL CALLBACK EnumJoysticksCallback( const DIDEVICEINSTANCE* pdidInstance, VOID* pContext )
-{
-    HRESULT hr;
-
-    // Obtain an interface to the enumerated joystick.
-    hr = g_pDI->CreateDevice( pdidInstance->guidInstance, &g_pJoystick, NULL );
-
-	if( FAILED( hr = g_pJoystick->SetDataFormat( &c_dfDIJoystick2 ) ) )
-        return hr;
-
-    if( FAILED( hr = g_pJoystick->SetCooperativeLevel( NULL, DISCL_NONEXCLUSIVE| DISCL_BACKGROUND ) ) )
-        return hr;
-
-    if( FAILED( hr ) )
-        return DIENUM_CONTINUE;
-
-    return DIENUM_STOP;
-	//return DIENUM_CONTINUE;
-}
-#endif
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
 
