@@ -5,6 +5,7 @@
 struct gui_struct {
 	HWND hwnd;
 	HWND hwndConsole;
+	HWND hwndInput;
 	HMENU hmenuTray;
 	HINSTANCE hInstance;
 	int createtray;

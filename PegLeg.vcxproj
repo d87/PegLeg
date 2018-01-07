@@ -97,12 +97,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>CompileAsCpp</CompileAs>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -123,7 +123,7 @@
       <MinimalRebuild>true</MinimalRebuild>
       <ExceptionHandling>
       </ExceptionHandling>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -199,18 +199,22 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\gamepad.cpp" />
     <ClCompile Include="src\gui.cpp" />
     <ClCompile Include="src\inputemu.cpp" />
     <ClCompile Include="src\lua_func.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\onscreendisplay.cpp" />
+    <ClCompile Include="src\soundplayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\gamepad.h" />
     <ClInclude Include="src\gui.h" />
     <ClInclude Include="src\inputemu.h" />
     <ClInclude Include="src\lua_func.h" />
     <ClInclude Include="src\pegleg.h" />
     <ClInclude Include="src\res.h" />
+    <ClInclude Include="src\soundplayer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\res.rc" />

@@ -10,7 +10,9 @@
 extern int Shutdown();
 
 struct gui_struct gui;
-UINT mTaskbarCreated;
+UINT WM_TASKBARCREATED;
+
+WNDPROC DefEditProc;
 
 //int WINAPI WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nCmdShow )
 void guiThread( void *param  )
@@ -19,8 +21,8 @@ void guiThread( void *param  )
 	gui.hInstance = hInstance;
 
 	WNDCLASSEX wc;
-	LoadLibrary("RichEd20.dll");
-	//LoadLibrary("Msftedit.dll");
+	//LoadLibrary("RichEd20.dll");
+	LoadLibrary("Msftedit.dll");
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style  = 0;
 	wc.lpfnWndProc = WndProc ;
@@ -40,7 +42,7 @@ void guiThread( void *param  )
  	        return;
 	}
 
-	HWND hwnd = CreateWindowEx(
+	gui.hwnd = CreateWindowEx(
 		//WS_EX_CLIENTEDGE,
 		WS_EX_TOOLWINDOW|WS_EX_TOPMOST,
 		wc.lpszClassName,
@@ -50,7 +52,7 @@ void guiThread( void *param  )
 		NULL , NULL , 
 		hInstance , NULL
 		);
-	gui.hwnd = hwnd;
+	HWND hwnd = gui.hwnd;
 
 	if(hwnd == NULL) {
 		MessageBox(NULL , "Failed to create window", "Error", MB_ICONEXCLAMATION | MB_OK );
@@ -62,7 +64,7 @@ void guiThread( void *param  )
 	UpdateWindow(gui.hwndConsole);
 	SetEvent(gui.event_ready);
 	
-	mTaskbarCreated = RegisterWindowMessageW(L"TaskbarCreated"); //when explorer crashes it will restore tray icon
+	WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated"); //when explorer crashes it will restore tray icon
 	MSG Msg;
 	while(GetMessage(&Msg,NULL,0,0)) {	
 		TranslateMessage(&Msg);
@@ -87,22 +89,77 @@ int InstallTrayIcon(HWND hwnd){
 	return 1;
 }
 
+LRESULT EditKeyProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	if (uMsg == WM_KEYDOWN) {
+		if (wParam == VK_RETURN) { // && GetAsyncKeyState(VK_CONTROL)
+			int nLen = GetWindowTextLengthW(hwnd);
+			WCHAR * buffer = 0;
+			buffer = new WCHAR[nLen + 1];
+			GetWindowTextW(hwnd, buffer, nLen+1);
+			buffer[nLen+1] = NULL;
+
+			repl->Enqueue(buffer);
+			PostThreadMessage(mainThreadId, WM_COMMAND, REPL_EVAL, NULL);
+
+			UINT text_length = SendMessage(hwnd, WM_GETTEXTLENGTH, 0, 0);
+			CHARRANGE range;
+
+			range.cpMin = 0;
+			range.cpMax = text_length;
+			SendMessage(hwnd, EM_EXSETSEL, 0, (LPARAM)&range);
+			SendMessage(hwnd, EM_REPLACESEL, FALSE, 0);
+
+			return 0;
+		}
+	}
+	return CallWindowProc(DefEditProc, hwnd, uMsg, wParam, lParam);
+}
+
+
 int OnCreate( HWND hwnd)
 {
-	gui.hwndConsole = CreateWindowEx(
+	gui.hwndConsole = CreateWindowExW(
 		0,
-		RICHEDIT_CLASS,
+		MSFTEDIT_CLASS,
 		NULL,
 		WS_CHILD|WS_VISIBLE|ES_READONLY|ES_MULTILINE|WS_VSCROLL|ES_NOHIDESEL,
 		0, 0,
-		gui.width+3, gui.height-25,
+		gui.width+3, gui.height-60,
 		hwnd,
 		0,
-		0,
+		gui.hInstance,
 		NULL);
 	if (!gui.hwndConsole) return 0;
+	gui.hwndInput = CreateWindowExW(
+		0,
+		MSFTEDIT_CLASS,
+		NULL,
+		WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | ES_NOHIDESEL,
+		0, gui.height - 60,
+		gui.width + 3, 25,
+		hwnd,
+		0,
+		gui.hInstance,
+		NULL);
 
-	//tray
+	DefEditProc = (WNDPROC)SetWindowLongPtr(gui.hwndInput, GWLP_WNDPROC, (LONG_PTR)&EditKeyProc);
+
+	COLORREF bgclr = RGB(15, 15, 15);
+	SendMessage(gui.hwndInput, EM_SETBKGNDCOLOR, 0, (LPARAM)bgclr);
+
+	CHARFORMAT fmt;
+	COLORREF clr = RGB(178, 178, 178);
+
+	fmt.cbSize = sizeof(CHARFORMAT);
+	fmt.dwMask = CFM_COLOR | CFM_FACE | CFM_SIZE | CFM_BOLD | CFM_ITALIC | CFM_STRIKEOUT | CFM_UNDERLINE;
+	fmt.yHeight = 200;
+	fmt.dwEffects = 0;
+	fmt.crTextColor = clr;
+	strcpy(fmt.szFaceName, "Consolas");
+
+	SendMessage(gui.hwndInput, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt);
+	SendMessage(gui.hwndConsole, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt);
+
 	if (gui.createtray) {
 		gui.hmenuTray = CreatePopupMenu();
 		AppendMenu(gui.hmenuTray, MF_STRING, ID_SHOWCONSOLE, "&Show Console");
@@ -133,8 +190,18 @@ void KillTrayIcon(HWND hwnd)
     Shell_NotifyIcon(NIM_DELETE, &dta);
 }
 
-static void OnCommand(HWND hwnd, int id)
+
+static void OnCommand(HWND hwnd, WPARAM wParam, LPARAM lParam)
 {
+	DWORD hiw = HIWORD(wParam);
+
+
+	//if (hiw == EN_UPDATE) {
+	//	int a = 0;
+	//}
+
+	UINT id = (UINT)wParam;
+
 	if( id == ID_EXIT ) {
 		Shutdown();
 	}
@@ -161,38 +228,41 @@ static int OnShellNotify(HWND hwnd, int uID, int uMessage)
 
 static int OnHotkey(HWND hwnd , WPARAM wParam , LPARAM lParam) {
 	int id = (int)wParam;
-	id = 0;
 	return 0;
 }
 
 LRESULT CALLBACK WndProc (HWND hwnd , UINT msg,WPARAM wParam , LPARAM lParam)
 {
 	//COLORREF clr = RGB(0, 0, 0);
-	if (msg == mTaskbarCreated){
+	if (msg == WM_TASKBARCREATED ){
 		InstallTrayIcon(hwnd);
 		return 0;
 	}
-	switch(msg) {
-		
+	switch(msg) {		
 		case WM_CREATE:
-			return OnCreate(hwnd);
+			OnCreate(hwnd);
+			break;
 		case WM_CLOSE:
-			return OnClose(hwnd);
-		case WM_SIZE:
-			return 0;
+			OnClose(hwnd);
+			break;
+		//case WM_SIZE:
+			//break;
 		case WM_HOTKEY:
 			OnHotkey(hwnd, wParam, lParam);
-			return 0;
+			break;
 		case WM_DESTROY:
 			PostQuitMessage(0);
-			return 0;
+			break;
 		case WM_COMMAND:
-			OnCommand(hwnd, (int)wParam);
-			return 0;
+			OnCommand(hwnd, wParam, lParam);
+			break;
 		case WM_SHELLNOTIFY:
-			return OnShellNotify(hwnd, wParam, lParam);
+			OnShellNotify(hwnd, wParam, lParam);
+			break;
+		default:
+			return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
-	return DefWindowProc(hwnd,msg,wParam,lParam);
+	return 0;
 }
 
 void guiAddText(const char *str)
@@ -201,7 +271,7 @@ void guiAddText(const char *str)
 	int start_lines, text_length, end_lines;
 	CHARRANGE cr;
 	CHARRANGE ds;
-	CHARFORMAT fmt;
+	//CHARFORMAT fmt;
 	text_length = SendMessage(gui.hwndConsole, WM_GETTEXTLENGTH, 0, 0);
 	
 	if ( text_length >30000 ) {
@@ -217,15 +287,23 @@ void guiAddText(const char *str)
 	
 	SendMessage(gui.hwndConsole, EM_EXSETSEL, 0, (LPARAM)&cr); 
 	
-	fmt.cbSize = sizeof(CHARFORMAT);
-	fmt.dwMask = CFM_COLOR|CFM_FACE|CFM_SIZE|CFM_BOLD|CFM_ITALIC|CFM_STRIKEOUT|CFM_UNDERLINE;
-	fmt.yHeight = 200;
-	fmt.dwEffects = 0;
-	fmt.crTextColor = clr;
-	strcpy(fmt.szFaceName,"Consolas");
+	//fmt.cbSize = sizeof(CHARFORMAT);
+	//fmt.dwMask = CFM_COLOR|CFM_FACE|CFM_SIZE|CFM_BOLD|CFM_ITALIC|CFM_STRIKEOUT|CFM_UNDERLINE;
+	//	fmt.yHeight = 200;
+	//fmt.dwEffects = 0;
+	//fmt.crTextColor = clr;
+	//strcpy(fmt.szFaceName,"Consolas");
+
+	std::string buf(str);
+	int reqChars = MultiByteToWideChar(CP_UTF8, 0, buf.c_str(), -1, 0, 0);
+
+	std::wstring wstr(reqChars, 0);
+	MultiByteToWideChar(CP_UTF8, 0, buf.c_str(), -1, &wstr[0], reqChars);
+
+	//http://www.nubaria.com/en/blog/?p=289
 	
-	SendMessage(gui.hwndConsole, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&fmt);
-	SendMessage(gui.hwndConsole, EM_REPLACESEL, FALSE, (LPARAM)str);
+	//SendMessage(gui.hwndConsole, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&fmt);
+	SendMessageW(gui.hwndConsole, EM_REPLACESEL, FALSE, (LPARAM)wstr.c_str());
 }
 
 int gui_printf( const char *format, va_list arglist )

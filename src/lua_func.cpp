@@ -5,6 +5,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+
 using namespace std;
 
 struct PLTIMER {
@@ -70,6 +72,8 @@ int CreateLua() {
 
 	lua_register(L, "GetSelectedGamepad", l_GetSelectedGamepad);
 	lua_register(L, "SelectGamepad", l_SelectGamepad);
+
+	lua_register(L, "PlaySound", l_PlaySound);
 
 	lua_register(L, "CreateFrame", l_CreateFrame);
 	
@@ -216,7 +220,7 @@ static int l_UnregisterEvent(lua_State *L) {
 }
 
 static int l_shell ( lua_State *luaVM ) {
-	char cmdl[1000];
+	TCHAR cmdl[1000];
 	sprintf(cmdl,"%s /c %s","cmd.exe",luaL_checkstring(luaVM, 1));
 	STARTUPINFO si;
     PROCESS_INFORMATION pi;
@@ -258,12 +262,14 @@ static int l_Shutdown ( lua_State *luaVM ) {
 	return 0;
 }
 static int l_GetWindowTitle( lua_State *luaVM ) {
-	char *Title = (char *)malloc(sizeof(char)*200);
 	HWND hwnd = GetForegroundWindow();
-	GetWindowText(hwnd,Title,200);
-	lua_pushstring(luaVM, Title);
+	UINT nLen = GetWindowTextLength(hwnd);
+
+	std::string str(nLen, 0);
+	GetWindowText(hwnd, &str[0], nLen);
+	lua_pushstring(luaVM, str.c_str());
 	lua_pushnumber(luaVM, (UINT32)hwnd);
-	free(Title);
+
 	return 2;
 }
 
@@ -673,13 +679,17 @@ static int l_GetJoyPosInfo ( lua_State *L ) {
 
 	return 7;
 #else
-	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbLX*100/0xFFFF);
-	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbLY*100/0xFFFF);
-	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbRX*100/0xFFFF);
-	lua_pushnumber ( L, g_ControllerState.Gamepad.sThumbRY*100/0xFFFF);
-	lua_pushnumber ( L, g_ControllerState.Gamepad.bLeftTrigger*100/0xFF);
-	lua_pushnumber ( L, g_ControllerState.Gamepad.bRightTrigger*100/0xFF);
-	return 6;
+	if (g_gamepadGroup->activeGamepad != NULL) {
+		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbLX * 100 / 0xFFFF);
+		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbLY * 100 / 0xFFFF);
+		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbRX * 100 / 0xFFFF);
+		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbRY * 100 / 0xFFFF);
+		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.bLeftTrigger * 100 / 0xFF);
+		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.bRightTrigger * 100 / 0xFF);
+		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.dwPacketNumber);
+		return 7;
+	}
+	return 0;
 #endif
 }
 
@@ -705,17 +715,10 @@ static int l_IsJoyButtonPressed ( lua_State *L ) {
 		lua_pushnil(L);
 	return 1;
 #else
-	int buttonID = -1;
-	if (lua_isstring(L, 1)) {
-		const char* btnName = (const char*) luaL_checkstring(L, 1);
-		for (int i=0; g_GamepadButtonNames[i]; i++)
-			if (!strcmp(_strupr((char*)btnName), g_GamepadButtonNames[i]))
-				buttonID = i;
-	} else {
-		buttonID = luaL_checkinteger(L, 1) - 1;
-	}
-	if (buttonID > -1)
-		lua_pushboolean(L, (g_ControllerState.Gamepad.wButtons >> buttonID) &1);
+	const char* btnName = (const char*) luaL_checkstring(L, 1);
+		
+	if (g_gamepadGroup->activeGamepad)
+		lua_pushboolean(L, g_gamepadGroup->activeGamepad->IsPressed((char*)btnName));
 	else
 		lua_pushnil(L);
 	return 1;
@@ -738,10 +741,8 @@ static int l_SetGamepadVibration( lua_State *L ) {
 		vibration.wRightMotorSpeed = speed;
 		vibration.wLeftMotorSpeed = speed;
 	}
-	XInputSetState( ControllerID, &vibration );
-//#else
-	//if (g_pJoystick == NULL) return 0;
-	//g_pJoystick->SendForceFeedbackCommand(
+	XInputSetState( g_gamepadGroup->activeGamepadID, &vibration );
+
 #endif
 	return 0;
 }
@@ -835,10 +836,10 @@ static int l_GetClipboardText(lua_State *L) {
 		GlobalUnlock(hglb);
 		CloseClipboard();
 		if (wstr) {
-			char *str = (char *)malloc(sizeof(char) * 1000);
-			wcstombs(str,wstr, 1000);
-			//printf("%s\n", str);
-			lua_pushstring(L, str);
+			int strLen = lstrlenW(wstr);
+			std::string str(strLen + 1, 0);			
+			WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &str[0], strLen, NULL, NULL);
+			lua_pushstring(L, str.c_str());
 			return 1;
 		}
 	}
@@ -950,16 +951,69 @@ static int l_SetMouseSpeed(lua_State *L){
 }
 
 static int l_GetSelectedGamepad(lua_State *L) {
-	lua_pushnumber(L, ControllerID+1);
+	lua_pushnumber(L, g_gamepadGroup->activeGamepadID+1);
 	return 1;
 }
 
 static int l_SelectGamepad(lua_State *L) {
-	const DWORD newGamepadID = luaL_checknumber(L, 1);
+	/*const DWORD newGamepadID = luaL_checknumber(L, 1);
 	if (newGamepadID > 0 && newGamepadID <= 5) {
 		ControllerID = newGamepadID - 1;
 		lua_pushnumber(L, ControllerID + 1);
 		return 1;
-	}
+	}*/
 	return 0;
+}
+
+
+static int l_PlaySound(lua_State *L) {
+	std::string fn = (const char*) luaL_checkstring(L, 1);
+
+	int reqChars = MultiByteToWideChar(CP_UTF8, 0, fn.c_str(), -1, 0, 0);
+
+	std::wstring wfn(reqChars, 0);
+	MultiByteToWideChar(CP_UTF8, 0, fn.c_str(), -1, &wfn[0], reqChars);
+
+
+	soundplayer->Play(wfn.c_str());
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+REPL::REPL() {
+	InitializeSRWLock(&lock);
+}
+
+int REPL::Enqueue(WCHAR *str) {
+	std::wstring newwstring (str);
+	AcquireSRWLockExclusive(&lock);
+	replque.push(newwstring);
+	ReleaseSRWLockExclusive(&lock);
+	return 1;
+}
+
+int REPL::EvalTop() {
+	std::wstring evalstr;
+	BOOL gotWork = false;
+	AcquireSRWLockExclusive(&lock);
+	if (!replque.empty()) {
+		evalstr = replque.front();
+		replque.pop();
+		gotWork = true;
+	}
+	ReleaseSRWLockExclusive(&lock);
+
+	if (gotWork) {
+		int strLen = evalstr.length();
+		int reqBytes = WideCharToMultiByte(CP_UTF8, 0, evalstr.c_str(), strLen, NULL, 0, NULL, NULL);
+
+		std::string str(reqBytes + 1, 0);
+		WideCharToMultiByte(CP_UTF8, 0, evalstr.c_str(), strLen, &str[0], reqBytes, NULL, NULL);
+
+		//luaL_dostring(L, str);
+		luaL_loadstring(L, str.c_str());
+		if (lua_pcall(L, 0, 0, 0) != 0)
+			error(L, "error running function: %s", lua_tostring(L, -1));
+	}
+	return 1;
 }

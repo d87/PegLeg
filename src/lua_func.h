@@ -1,6 +1,8 @@
 #ifndef _luaf_included
 #define _luaf_included
 
+#define _ALLOW_RTCc_IN_STL
+
 extern "C" {
 #include "lua/src/lua.h"
 #include "lua/src/lualib.h"
@@ -11,6 +13,9 @@ extern "C" {
 #include <richedit.h>
 #include <Mmdeviceapi.h>
 #include <Endpointvolume.h>
+
+#include <string>
+#include <queue>
 
 #include "gui.h"
 #include "inputemu.h"
@@ -78,5 +83,20 @@ int l_GetMouseSpeed(lua_State *L);
 int l_SetMouseSpeed(lua_State *L);
 int l_GetSelectedGamepad(lua_State *L);
 int l_SelectGamepad(lua_State *L);
+int l_PlaySound(lua_State *L);
+
+using namespace std;
+
+class REPL {
+private:
+	queue<wstring> replque;
+	SRWLOCK lock;
+
+public:
+	REPL();
+	int Enqueue(WCHAR *str);
+	int EvalTop();
+};
+
 
 #endif

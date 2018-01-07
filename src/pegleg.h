@@ -1,5 +1,9 @@
+#pragma once
+
+#define _ALLOW_RTCc_IN_STL
 #define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
+
 #define KDOWN 0
 #define KUP 1
 #define MDOWN 2
@@ -15,8 +19,13 @@
 #define MAX_EVENTS 32
 
 #define RELOADLUA 0xAAA
+#define REPL_EVAL 0xBBB
 
 #define XINPUT
+
+#include "soundplayer.h"
+#include "gamepad.h"
+#include "lua_func.h"
 
 #ifndef XINPUT
 
@@ -55,19 +64,17 @@ extern DIJOYSTATE2 js;
 extern LPDIRECTINPUT8          g_pDI;
 extern LPDIRECTINPUTDEVICE8    g_pJoystick;
 extern DWORD btnState;
-#else
-
-//#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE 9000
-extern XINPUT_STATE g_ControllerState;
-extern DWORD ControllerID;
-#endif
 extern char *g_GamepadButtonNames[17];
+#endif
 
 extern int events[12][MAX_EVENTS];
 extern int timerMap[MAX_EVENTS];
 extern int mainThreadId;
 extern HHOOK hhkLowLevelKeyboard;
 extern HHOOK hhkLowLevelMouse;
+extern SoundPlayer *soundplayer;
+extern GamepadGroup *g_gamepadGroup;
+extern REPL *repl;
 
 void EnableMouseHooks(bool enable);
 void error (lua_State *L, const char *fmt, ...);

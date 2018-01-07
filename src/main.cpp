@@ -15,12 +15,16 @@ extern "C" {
 #include "pegleg.h"
 #include "gui.h"
 #include "lua_func.h"
+#include "soundplayer.h"
+#include "gamepad.h"
 #include <richedit.h>
 
 #pragma comment( lib, "lua5.2.lib" )
 #pragma comment( lib, "Winmm.lib" )
 
 #define EXTRACTBIT(var, index) ((var >> index) & 1)
+
+using namespace std;
 
 int events[12][MAX_EVENTS];
 int timerMap[MAX_EVENTS];
@@ -30,7 +34,10 @@ HHOOK hhkLowLevelKeyboard = 0;
 HHOOK hhkLowLevelMouse = 0;
 HHOOK hhkActivate = 0;
 
-DWORD ControllerID = 0;
+SoundPlayer *soundplayer;
+GamepadGroup *g_gamepadGroup;
+REPL *repl;
+
 #ifndef XINPUT
 
 //#define DIRECTINPUT_VERSION 0x0800
@@ -56,27 +63,9 @@ char *g_GamepadButtonNames[17] = {
 	"TOUCHPAD",
 	(char)NULL
 };
-#else
-XINPUT_STATE g_ControllerState;
-char *g_GamepadButtonNames[17] = {
-	"UP",
-	"DOWN",
-	"LEFT",
-	"RIGHT",
-	"START",
-	"BACK",
-	"LS",
-	"RS",
-	"L1",
-	"R1",
-	"UB1",
-	"UB2",
-	"A",
-	"B",
-	"X",
-	"Y",
-	(char)NULL
-};
+
+
+
 #endif
 
 int mainThreadId;
@@ -170,14 +159,6 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 }
 
 LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam){
-	/*if (...)
-		HWND hNewActiveWnd = (HWND)lParam;
-		char *Title = (char *)malloc(sizeof(char)*200);
-		GetWindowText(hNewActiveWnd,Title,200);
-		for (int i=0; events[ONCREATE][i] && i < MAX_EVENTS; i++ )
-			FireEvent(L,events[ONCREATE][i], Title, 0, 0);
-		free(Title);
-	}*/
 	return CallNextHookEx(NULL, nCode, wParam,lParam);
 }
 
@@ -288,6 +269,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	setvbuf( stdout, NULL, _IONBF, 0 );
 #endif
 
+	setlocale(LC_ALL, "");
+
 	mainThreadId = GetCurrentThreadId();
 	g_hInstance = hInstance;
 
@@ -312,8 +295,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 	LoadScript(L, "pegleg.conf.lua");
 
-	//gui = (gui_struct *)malloc(sizeof(gui_struct));
-
 	lua_getglobal(L, "console");
 	lua_getfield(L, -1, "enabled");
 	int CreateConsole = lua_toboolean(L, -1);
@@ -337,37 +318,26 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		WaitForSingleObject( gui.event_ready, 5000 );
 	}
 
-//#ifndef _DEBUG
+#ifndef _DEBUG
 	lua_getglobal(L, "KEYBOARD_HOOKS_DISABLED");
 	if (!lua_toboolean(L, -1)){
 		hhkLowLevelKeyboard = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInstance, 0);
 	}
 	//hhkLowLevelMouse  = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, hInstance, 0);
 	//hhkActivate =  SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)GetMsgProc, hInstance, 0);
-//#endif
+#endif
 
 	InitLua();
+
+	repl = new REPL();
+	soundplayer = new SoundPlayer();
+	g_gamepadGroup = new GamepadGroup();
 
 	double pollingTimeout = 0.015;
 	double prevPollTime = 0;
 	double now = 0;
-	double lastDeviceCheck = 0;
-#ifndef XINPUT
-	HRESULT hr;
-    // Create a DInput object
-	g_pJoystick = NULL;
-	g_pDI = NULL;
-    if( FAILED( hr = DirectInput8Create( GetModuleHandle( NULL ), DIRECTINPUT_VERSION,
-                                         IID_IDirectInput8, ( VOID** )&g_pDI, NULL ) ) )
-        return hr;
-#else
-	DWORD prevPacketNumber = 0;
-	ZeroMemory( &g_ControllerState, sizeof(XINPUT_STATE) );
-	XINPUT_STATE prevControllerState;
-#endif
-	DWORD prevJoyButtonState = 0;
-	DWORD changedJoyButtons = 0;
-	DWORD highestBit = 1 << 31;
+	
+
 
 
 	MSG msg;
@@ -392,6 +362,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				int cmdID = (int)msg.wParam;
 				if (cmdID == RELOADLUA)
 					ReloadLua();
+				if (cmdID == REPL_EVAL)
+					repl->EvalTop();
 			}
 			//TranslateMessage(&msg);
 			//DispatchMessage(&msg);
@@ -403,92 +375,19 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 			ProcTimers( (int)(pollingTimeout*1000) );
 
-#ifndef XINPUT
-			if (g_pJoystick == NULL || FAILED( hr = g_pJoystick->Acquire()))  {
-				if (now > lastDeviceCheck + 1){ //2s timeouts
-					lastDeviceCheck = now;
-					g_pJoystick = NULL;
-					hr = g_pDI->EnumDevices( DI8DEVCLASS_GAMECTRL, EnumJoysticksCallback, NULL, DIEDFL_ATTACHEDONLY );
-				}
-			} else {
-				hr = g_pJoystick->Poll();
-				hr = g_pJoystick->GetDeviceState( sizeof( DIJOYSTATE2 ), &js );
-				hr = g_pJoystick->Unacquire();
-
-				btnState=0;
-				for (int i = 0; i<32; i++) {
-					btnState = btnState >> 1;
-					if (js.rgbButtons[i] == 128) {
-						btnState += highestBit;
-					}
-				}
-
-				for (int i=0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++ )
-						FireEvent(L, events[JOYUPDATE][i], 0, 0, 0);
-
-
-				changedJoyButtons = prevJoyButtonState ^ btnState;
-				prevJoyButtonState = btnState;
-
-				if (changedJoyButtons){
-					for (int btn=0;btn<32; btn++){
-						if (EXTRACTBIT(changedJoyButtons, btn)){
-							if (EXTRACTBIT(prevJoyButtonState, btn)){ //it's inverted
-								for (int i=0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++ )
-									FireEvent(L, events[JOYBUTTONDOWN][i], g_GamepadButtonNames[btn], btn+1, 0);
-							}else{
-								for (int i=0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++ )
-									FireEvent(L, events[JOYBUTTONUP][i], g_GamepadButtonNames[btn], btn+1, 0);
-							}
-						}
-					}
-				}
-			}
-#else
-			 //ZeroMemory( &ControllerState, sizeof(XINPUT_STATE) );
-			DWORD error = XInputGetState(ControllerID, &g_ControllerState);
-			if ( error  == ERROR_SUCCESS ) {
-				//if (g_ControllerState.dwPacketNumber != prevPacketNumber) {
-					prevPacketNumber = g_ControllerState.dwPacketNumber;
-
-					for (int i=0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++ )
-						FireEvent(L, events[JOYUPDATE][i], 0, 0, 0);
-
-					changedJoyButtons = prevJoyButtonState ^ g_ControllerState.Gamepad.wButtons;
-					prevJoyButtonState = g_ControllerState.Gamepad.wButtons;
-					if (changedJoyButtons){
-						for (int btn=0;btn<20; btn++){
-							if (EXTRACTBIT(changedJoyButtons, btn)){
-								if (EXTRACTBIT(prevJoyButtonState, btn)){ // it's inverted
-									for (int i=0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++ )
-										FireEvent(L, events[JOYBUTTONDOWN][i], g_GamepadButtonNames[btn], btn+1, 0);
-								}else{
-									for (int i=0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++ )
-										FireEvent(L, events[JOYBUTTONUP][i], g_GamepadButtonNames[btn], btn+1, 0);
-								}
-							}
-						}
-					}
-				//}
-			} else {
-				if (error == ERROR_DEVICE_NOT_CONNECTED){
-					for (int i = 0; i < XUSER_MAX_COUNT; i++) {
-						DWORD error = XInputGetState(i, &g_ControllerState);
-						if (error == ERROR_SUCCESS)
-							ControllerID = i;
-					}
-				}
-				//g_ControllerState.Gamepad. = NULL;
-			}
-#endif
+			g_gamepadGroup->Poll();
 		}
 
 		Sleep(1);
 	}
 
+#ifndef _DEBUG
 	UnhookWindowsHookEx(hhkLowLevelKeyboard);
 	EnableMouseHooks(0);
 	//UnhookWindowsHookEx(hhkLowLevelMouse);
+#endif
+
+	soundplayer->Release();
 	lua_close(L);
 
 	return 1;

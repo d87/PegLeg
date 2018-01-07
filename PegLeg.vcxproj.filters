@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="src\gui.cpp" />
+    <ClCompile Include="src\inputemu.cpp" />
+    <ClCompile Include="src\lua_func.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\onscreendisplay.cpp" />
+    <ClCompile Include="src\soundplayer.cpp" />
+    <ClCompile Include="src\gamepad.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\soundplayer.h" />
+    <ClInclude Include="src\gamepad.h" />
+    <ClInclude Include="src\gui.h" />
+    <ClInclude Include="src\inputemu.h" />
+    <ClInclude Include="src\lua_func.h" />
+    <ClInclude Include="src\pegleg.h" />
+    <ClInclude Include="src\res.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\res.rc" />
+  </ItemGroup>
+</Project>
