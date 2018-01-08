@@ -92,6 +92,16 @@ int InstallTrayIcon(HWND hwnd){
 	return 1;
 }
 
+void ReplaceEditTextW(HWND hwnd, LPARAM lParam) {
+	UINT text_length = SendMessage(hwnd, WM_GETTEXTLENGTH, 0, 0);
+	CHARRANGE range;
+
+	range.cpMin = 0;
+	range.cpMax = text_length;
+	SendMessage(hwnd, EM_EXSETSEL, 0, (LPARAM)&range);
+	SendMessageW(hwnd, EM_REPLACESEL, FALSE, lParam);
+}
+
 LRESULT EditKeyProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	if (uMsg == WM_KEYDOWN) {
 		if (wParam == VK_RETURN) { // && GetAsyncKeyState(VK_CONTROL)
@@ -104,15 +114,21 @@ LRESULT EditKeyProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			repl->Enqueue(buffer);
 			PostThreadMessage(mainThreadId, WM_COMMAND, REPL_EVAL, NULL);
 
-			UINT text_length = SendMessage(hwnd, WM_GETTEXTLENGTH, 0, 0);
-			CHARRANGE range;
-
-			range.cpMin = 0;
-			range.cpMax = text_length;
-			SendMessage(hwnd, EM_EXSETSEL, 0, (LPARAM)&range);
-			SendMessage(hwnd, EM_REPLACESEL, FALSE, 0);
+			ReplaceEditTextW(hwnd, 0);
 
 			return 0;
+		}
+		else if (wParam == VK_UP) {
+			std::wstring nextline = repl->HistoryNext();
+			if (nextline != L"<None>") {
+				ReplaceEditTextW(hwnd, (LPARAM)nextline.c_str() );
+			}
+		}
+		else if (wParam == VK_DOWN) {
+			std::wstring prevline = repl->HistoryPrevious();
+			if (prevline != L"<None>") {
+				ReplaceEditTextW(hwnd, (LPARAM)prevline.c_str());
+			}
 		}
 	}
 	return CallWindowProc(DefEditProc, hwnd, uMsg, wParam, lParam);

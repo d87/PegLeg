@@ -265,8 +265,8 @@ static int l_GetWindowTitle( lua_State *luaVM ) {
 	HWND hwnd = GetForegroundWindow();
 	UINT nLen = GetWindowTextLength(hwnd);
 
-	std::string str(nLen, 0);
-	GetWindowText(hwnd, &str[0], nLen);
+	std::string str(nLen+1, 0);
+	GetWindowText(hwnd, &str[0], nLen+1);
 	lua_pushstring(luaVM, str.c_str());
 	lua_pushnumber(luaVM, (UINT32)hwnd);
 

@@ -3,6 +3,7 @@
 
 REPL::REPL() {
 	InitializeSRWLock(&lock);
+	historyIndex = 0;
 }
 
 int REPL::Enqueue(WCHAR *str) {
@@ -31,6 +32,9 @@ int REPL::EvalTop() {
 		std::string str(reqBytes + 1, 0);
 		WideCharToMultiByte(CP_UTF8, 0, evalstr.c_str(), strLen, &str[0], reqBytes, NULL, NULL);
 
+		Store(evalstr);
+		historyIndex = 0;
+
 		if (luaL_loadstring(L, str.c_str()) == LUA_OK) {
 			if (lua_pcall(L, 0, 0, 0) != 0)
 				error(L, "error running function: %s", lua_tostring(L, -1));
@@ -40,4 +44,39 @@ int REPL::EvalTop() {
 		}
 	}
 	return 1;
+}
+
+void REPL::Store(wstring command) {
+	AcquireSRWLockExclusive(&lock);
+	history.insert(history.begin(), command);
+	if (history.size() > 10)
+		history.pop_back();
+	ReleaseSRWLockExclusive(&lock);
+	return;
+}
+
+std::wstring REPL::HistoryNext() {
+	AcquireSRWLockShared(&lock);
+	if (history.empty()) return L"<None>";
+
+	wstring r = history[historyIndex];
+	if (historyIndex+1 < history.size()) {
+		historyIndex++;
+	}
+	ReleaseSRWLockShared(&lock);
+	return r;
+}
+
+std::wstring REPL::HistoryPrevious() {
+	AcquireSRWLockShared(&lock);
+	if (history.empty()) return L"<None>";
+
+	if (historyIndex == 0) return L"";
+
+	if (historyIndex > 0) {
+		historyIndex--;
+	}
+	wstring r = history[historyIndex];
+	ReleaseSRWLockShared(&lock);
+	return r;
 }

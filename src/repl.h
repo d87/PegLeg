@@ -10,11 +10,15 @@ using namespace std;
 
 class REPL {
 private:
-	queue<wstring> replque;
+	std::queue<wstring> replque;
 	SRWLOCK lock;
-
+	UINT historyIndex;
+	std::vector<wstring> history;
 public:
 	REPL();
 	int Enqueue(WCHAR *str);
+	void Store(wstring command);
+	std::wstring HistoryPrevious();
+	std::wstring HistoryNext();
 	int EvalTop();
 };
