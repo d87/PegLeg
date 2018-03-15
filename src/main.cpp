@@ -16,6 +16,7 @@ extern "C" {
 #include "gui.h"
 #include "lua_func.h"
 #include "soundplayer.h"
+#include "VirtualDesktopControl.h"
 #include "gamepad.h"
 #include "repl.h"
 #include <richedit.h>
@@ -36,6 +37,7 @@ HHOOK hhkLowLevelMouse = 0;
 HHOOK hhkActivate = 0;
 
 SoundPlayer *soundplayer;
+VirtualDesktopControl *pVirtualDesktopControl;
 GamepadGroup *g_gamepadGroup;
 REPL *repl;
 
@@ -64,7 +66,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 	
 		PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT) lParam;
 		for (int i=0; events[trig][i] && i < MAX_EVENTS; i++ )
-		{	
+		{
 			if (FireEvent(L,events[trig][i],VKEYS[p->vkCode], (int)p->vkCode,(int)p->scanCode))
 				block = 1;
 		}
@@ -270,14 +272,21 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	if (!lua_toboolean(L, -1)){
 		hhkLowLevelKeyboard = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInstance, 0);
 	}
-	//hhkLowLevelMouse  = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, hInstance, 0);
-	//hhkActivate =  SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)GetMsgProc, hInstance, 0);
+	//hhkLowLevelMouse = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, hInstance, 0);
+	//hhkActivate = SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)GetMsgProc, hInstance, 0);
 #endif
 
 	InitLua();
+	
+	::CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE); // COINIT_MULTITHREADED is important here
 
 	repl = new REPL();
 	soundplayer = new SoundPlayer();
+	pVirtualDesktopControl = new VirtualDesktopControl();
+	if (FAILED(pVirtualDesktopControl->Initialize())) {
+		error(L, "error initializing Virtual Desktop Manager");
+	}
+
 	g_gamepadGroup = new GamepadGroup();
 
 	double pollingTimeout = 0.015;
@@ -335,6 +344,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	// end up here
 
 	soundplayer->Release();
+	pVirtualDesktopControl->Release();
+	CoUninitialize();
+
 	lua_close(L);
 
 	exit(1);

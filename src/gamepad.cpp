@@ -70,6 +70,12 @@ Gamepad::Gamepad(unsigned int gamepadId) {
 }
 
 int Gamepad::Poll() {
+	if (skipCounter > 0) {
+		skipCounter--;
+		return -1;
+	}
+
+
 	DWORD changedJoyButtons = 0;
 
 	DWORD error = XInputGetState(controllerID, &state);
@@ -124,6 +130,7 @@ int Gamepad::Poll() {
 	}
 	else {
 		if (error == ERROR_DEVICE_NOT_CONNECTED) {
+			skipCounter = 60;
 			return -1;
 			//for (int i = 0; i < XUSER_MAX_COUNT; i++) {
 			//DWORD error = XInputGetState(i, &state);

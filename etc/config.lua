@@ -173,6 +173,24 @@ end)
 
 AddScript("gamepad.lua")
 
+
+function echo()
+    print("echo")
+end
+function MoveWin(num)
+    return function()
+        MoveWindowToDesktop(num)
+    end
+end
+
+function After(ms, func)
+    local id = "Timer"..math.random(20)
+    CreateTimer(id, ms, function()
+        func()
+        KillTimer(id)
+    end)
+end
+
 --~ local t1 = 0
 --~ local t2 = 0
 --~ RegisterHotKey("ALT","G",function ()

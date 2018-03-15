@@ -81,7 +81,8 @@ int l_SetMouseSpeed(lua_State *L);
 int l_GetSelectedGamepad(lua_State *L);
 int l_SelectGamepad(lua_State *L);
 int l_PlaySound(lua_State *L);
-
+int l_SwitchToDesktop(lua_State *L);
+int l_MoveWindowToDesktop(lua_State *L);
 
 
 

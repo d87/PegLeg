@@ -12,8 +12,12 @@ public:
 	DWORD prevPacketNumber = 0;
 	DWORD controllerID = 0;
 	XINPUT_STATE state;
-	DWORD prevJoyButtonState = 0;
+	
 	//BOOL isConnected = 0;
+private:
+	UINT skipCounter = 0;
+	DWORD prevJoyButtonState = 0;
+
 public:
 	Gamepad(unsigned int gamepadId);
 	int Poll();

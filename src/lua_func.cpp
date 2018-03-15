@@ -74,6 +74,8 @@ int CreateLua() {
 	lua_register(L, "SelectGamepad", l_SelectGamepad);
 
 	lua_register(L, "PlaySound", l_PlaySound);
+	lua_register(L, "SwitchToDesktop", l_SwitchToDesktop);
+	lua_register(L, "MoveWindowToDesktop", l_MoveWindowToDesktop);
 
 	lua_register(L, "CreateFrame", l_CreateFrame);
 	
@@ -936,4 +938,27 @@ static int l_PlaySound(lua_State *L) {
 	soundplayer->Play(wfn.c_str());
 	lua_pushboolean(L, 1);
 	return 1;
+}
+
+
+static int l_SwitchToDesktop(lua_State *L) {
+	UINT desktopID = luaL_checknumber(L, 1);
+	if (desktopID == 0) desktopID = 1;
+
+	pVirtualDesktopControl->SwitchToDesktop(desktopID - 1);
+
+	return 0;
+}
+
+static int l_MoveWindowToDesktop(lua_State *L) {
+	UINT desktopID = luaL_checknumber(L, 1);
+	if (desktopID == 0) desktopID = 1;
+	HWND topWindow = GetForegroundWindow();
+
+	if (topWindow != NULL) {
+		pVirtualDesktopControl->MoveWindowToDesktop(topWindow, desktopID - 1);
+		lua_pushboolean(L, 1);
+		return 1;
+	}
+	return 0;
 }

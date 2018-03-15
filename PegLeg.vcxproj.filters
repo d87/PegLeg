@@ -9,6 +9,7 @@
     <ClCompile Include="src\soundplayer.cpp" />
     <ClCompile Include="src\gamepad.cpp" />
     <ClCompile Include="src\repl.cpp" />
+    <ClCompile Include="src\VirtualDesktopControl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\soundplayer.h" />
@@ -19,6 +20,8 @@
     <ClInclude Include="src\pegleg.h" />
     <ClInclude Include="src\res.h" />
     <ClInclude Include="src\repl.h" />
+    <ClInclude Include="src\VirtualDesktopComObjects.h" />
+    <ClInclude Include="src\VirtualDesktopControl.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\res.rc" />

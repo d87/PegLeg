@@ -24,6 +24,7 @@
 #define XINPUT
 
 #include "soundplayer.h"
+#include "VirtualDesktopControl.h"
 #include "gamepad.h"
 #include "repl.h"
 #include "lua_func.h"
@@ -56,6 +57,7 @@ extern int mainThreadId;
 extern HHOOK hhkLowLevelKeyboard;
 extern HHOOK hhkLowLevelMouse;
 extern SoundPlayer *soundplayer;
+extern VirtualDesktopControl *pVirtualDesktopControl;
 extern GamepadGroup *g_gamepadGroup;
 extern REPL *repl;
 

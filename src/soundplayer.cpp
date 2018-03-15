@@ -2,12 +2,13 @@
 
 SoundPlayer::SoundPlayer() {
 	// Initialize the COM library.
-	HRESULT hr = CoInitialize(NULL);
-	if (FAILED(hr))
-	{
-		printf("ERROR - Could not initialize COM library");
-		return;
-	}
+	HRESULT hr;
+	//HRESULT hr = CoInitialize(NULL);
+	//if (FAILED(hr))
+	//{
+	//	printf("ERROR - Could not initialize COM library");
+	//	return;
+	//}
 
 	// Create the filter graph manager and query for interfaces.
 	hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER,
@@ -48,5 +49,5 @@ void SoundPlayer::Release() {
 	pControl->Release();
 	pEvent->Release();
 	pGraph->Release();
-	CoUninitialize();
+	//CoUninitialize();
 }
