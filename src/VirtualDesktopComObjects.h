@@ -22,6 +22,11 @@ const IID IID_IVirtualDesktopManagerInternal = {
 const CLSID CLASID_ApplicationViewCollection = {
 	0x2C08ADF0, 0xA386, 0x4B35, 0x92, 0x50, 0x0F, 0xE1, 0x83, 0x47, 0x6F, 0xCC };
 
+//4ce81583-1e4c-4632-a621-07a53543148f
+//b5a399e7 - 1c87 - 46b8 - 88e9 - fc5747b171bd
+const CLSID CLASID_VirtualDesktopPinnedApps = {
+	0xB5A399E7, 0x1C87, 0x46B8, 0x88, 0xE9, 0xFC, 0x57, 0x47, 0xB1, 0x71, 0xBD };
+
 EXTERN_C const IID IID_IApplicationView;
 
 MIDL_INTERFACE("9ac0b5c8-1484-4c5b-9533-4134a0f97cea")
@@ -194,4 +199,36 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE GetViewForHwnd(
 			HWND hWnd,
 			IApplicationView **ppApplicationView) = 0;
+};
+
+
+EXTERN_C const IID IID_IVirtualDesktopPinnedApps;
+
+MIDL_INTERFACE("4ce81583-1e4c-4632-a621-07a53543148f")
+IVirtualDesktopPinnedApps : public IUnknown
+{
+public:
+	//bool IsAppIdPinned(string appId);
+	virtual HRESULT STDMETHODCALLTYPE IsAppIdPinned(
+		LPCTSTR *appId, BOOL *bResult) = 0;
+
+	//void PinAppID(string appId);
+	virtual HRESULT STDMETHODCALLTYPE PinAppID(
+		LPCTSTR *appId) = 0;
+
+	//void UnpinAppID(string appId);
+	virtual HRESULT STDMETHODCALLTYPE UnpinAppID(
+		LPCTSTR *appId) = 0;
+
+	//bool IsViewPinned(IApplicationView applicationView);
+	virtual HRESULT STDMETHODCALLTYPE IsViewPinned(
+		IApplicationView *pView, BOOL *bResult) = 0;
+
+	//void PinView(IApplicationView applicationView);
+	virtual HRESULT STDMETHODCALLTYPE PinView(
+		IApplicationView *pView) = 0;
+
+	//void UnpinView(IApplicationView applicationView);
+	virtual HRESULT STDMETHODCALLTYPE UnpinView(
+		IApplicationView *pView) = 0;
 };

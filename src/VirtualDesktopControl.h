@@ -11,6 +11,7 @@ public:
 	IVirtualDesktopManager *pDesktopManager = nullptr;
 	IServiceProvider* pServiceProvider = nullptr;
 	IApplicationViewCollection *pApplicationViewCollection = nullptr;
+	IVirtualDesktopPinnedApps *pVirtualDesktopPinnedApps = nullptr;
 
 private:
 	BOOL _initialized = false;
@@ -20,5 +21,6 @@ public:
 	HRESULT Initialize();
 	HRESULT SwitchToDesktop(UINT num);
 	HRESULT MoveWindowToDesktop(HWND wnd, UINT num);
+	HRESULT TogglePinWindow(HWND wnd);
 	void Release();
 };

@@ -76,6 +76,8 @@ int CreateLua() {
 	lua_register(L, "PlaySound", l_PlaySound);
 	lua_register(L, "SwitchToDesktop", l_SwitchToDesktop);
 	lua_register(L, "MoveWindowToDesktop", l_MoveWindowToDesktop);
+	lua_register(L, "TogglePinCurrentWindow", l_TogglePinCurrentWindow);
+	
 
 	lua_register(L, "CreateFrame", l_CreateFrame);
 	
@@ -960,5 +962,11 @@ static int l_MoveWindowToDesktop(lua_State *L) {
 		lua_pushboolean(L, 1);
 		return 1;
 	}
+	return 0;
+}
+
+static int l_TogglePinCurrentWindow(lua_State *L) {
+	HWND topWindow = GetForegroundWindow();
+	pVirtualDesktopControl->TogglePinWindow(topWindow);
 	return 0;
 }

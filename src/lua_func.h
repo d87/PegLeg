@@ -83,7 +83,7 @@ int l_SelectGamepad(lua_State *L);
 int l_PlaySound(lua_State *L);
 int l_SwitchToDesktop(lua_State *L);
 int l_MoveWindowToDesktop(lua_State *L);
-
+int l_TogglePinCurrentWindow(lua_State *L);
 
 
 #endif
