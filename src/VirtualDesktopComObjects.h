@@ -68,8 +68,10 @@ enum AdjacentDesktop
 
 EXTERN_C const IID IID_IVirtualDesktopManagerInternal;
 
-
-// check https://github.com/Grabacr07/VirtualDesktop/blob/master/source/VirtualDesktop/Interop/IVirtualDesktopManagerInternal.cs if it becomes outdated
+// https://github.com/Ciantic/VirtualDesktopAccessor
+// check https://github.com/Grabacr07/VirtualDesktop/blob/master/source/VirtualDesktop/Interop/IVirtualDesktopManager.cs if it becomes outdated
+// and "C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\um\ShObjIdl.h"
+// and https://docs.microsoft.com/en-us/windows/desktop/api/shobjidl_core/nn-shobjidl_core-ivirtualdesktopmanager
 MIDL_INTERFACE("f31574d6-b682-4cdc-bd56-1827860abec6")
 IVirtualDesktopManagerInternal : public IUnknown
 {

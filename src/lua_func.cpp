@@ -77,6 +77,9 @@ int CreateLua() {
 	lua_register(L, "SwitchToDesktop", l_SwitchToDesktop);
 	lua_register(L, "MoveWindowToDesktop", l_MoveWindowToDesktop);
 	lua_register(L, "TogglePinCurrentWindow", l_TogglePinCurrentWindow);
+	lua_register(L, "IsWindowMaximized", l_IsWindowMaximized);
+	lua_register(L, "GetDesktopCount", l_GetDesktopCount);
+	lua_register(L, "GetCurrentDesktopNumber", l_GetCurrentDesktopNumber);
 	
 
 	lua_register(L, "CreateFrame", l_CreateFrame);
@@ -878,8 +881,39 @@ static int l_SetWindowPos(lua_State *L){
 	return 1;
 }
 
+//static int l_GetActiveWindowHandle(lua_State *L) {
+//	HWND hwnd = GetForegroundWindow();
+//	lua_pushnumber(L, (UINT32)hwnd);
+//	return 1;
+//}
+
+static int l_IsWindowMaximized(lua_State *L) {
+	UINT32 hwndNum = (UINT32)luaL_optnumber(L, 1, NULL);
+	HWND hwnd = (HWND)hwndNum;
+	if (!hwnd) hwnd = GetForegroundWindow();
+
+
+	WINDOWPLACEMENT wpl;
+	GetWindowPlacement(hwnd, &wpl);
+
+
+	
+	LONG style = GetWindowLong(hwnd, GWL_STYLE);
+
+	if ((style & WS_MAXIMIZE) == WS_MAXIMIZE) {
+		lua_pushboolean(L, 1);
+	}
+	else {
+		lua_pushboolean(L, 0);
+	}
+	return 1;
+}
+
 static int l_ShowWindow(lua_State *L){
-	const char * fs = luaL_checkstring(L, 1);
+	UINT32 hwndNum = (UINT32)luaL_checknumber(L, 1);
+	HWND hwnd = (HWND)hwndNum;
+	
+	const char * fs = luaL_checkstring(L, 2);
 	unsigned int mods = 0;
 	char *ptr = (char *)fs;
 	while (*ptr) {
@@ -888,8 +922,6 @@ static int l_ShowWindow(lua_State *L){
 		if (!strncmp(ptr, "SW_RESTORE", 10)) { mods |= SW_RESTORE;  ptr += 10; }
 		ptr++;
 	}
-
-	HWND hwnd = GetForegroundWindow();
 	ShowWindow(hwnd, mods);
 	return 0;
 }
@@ -969,4 +1001,15 @@ static int l_TogglePinCurrentWindow(lua_State *L) {
 	HWND topWindow = GetForegroundWindow();
 	pVirtualDesktopControl->TogglePinWindow(topWindow);
 	return 0;
+}
+
+
+static int l_GetDesktopCount(lua_State *L) {
+	lua_pushnumber(L, pVirtualDesktopControl->GetDesktopCount());
+	return 1;
+}
+
+static int l_GetCurrentDesktopNumber(lua_State *L) {
+	lua_pushnumber(L, pVirtualDesktopControl->GetCurrentDesktopNumber());
+	return 1;
 }

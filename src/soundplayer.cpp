@@ -35,7 +35,7 @@ void SoundPlayer::Play(LPCWSTR filename) {
 		hr = pControl->Run();
 		//if (SUCCEEDED(hr))
 		//{
-			// Wait for completion.
+			//  completion.
 			//long evCode;
 			//pEvent->WaitForCompletion(INFINITE, &evCode);
 

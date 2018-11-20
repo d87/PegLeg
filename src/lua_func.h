@@ -84,6 +84,8 @@ int l_PlaySound(lua_State *L);
 int l_SwitchToDesktop(lua_State *L);
 int l_MoveWindowToDesktop(lua_State *L);
 int l_TogglePinCurrentWindow(lua_State *L);
-
+int l_IsWindowMaximized(lua_State *L);
+int l_GetDesktopCount(lua_State *L);
+int l_GetCurrentDesktopNumber(lua_State *L);
 
 #endif

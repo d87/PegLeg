@@ -22,5 +22,10 @@ public:
 	HRESULT SwitchToDesktop(UINT num);
 	HRESULT MoveWindowToDesktop(HWND wnd, UINT num);
 	HRESULT TogglePinWindow(HWND wnd);
+	int GetDesktopNumberById(GUID desktopId);
+	int GetDesktopNumber(IVirtualDesktop *pDesktop);
+	IVirtualDesktop* GetCurrentDesktop();
+	int GetCurrentDesktopNumber();
+	int GetDesktopCount();
 	void Release();
 };
