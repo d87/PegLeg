@@ -1010,6 +1010,10 @@ static int l_GetDesktopCount(lua_State *L) {
 }
 
 static int l_GetCurrentDesktopNumber(lua_State *L) {
-	lua_pushnumber(L, pVirtualDesktopControl->GetCurrentDesktopNumber());
+	int cur = pVirtualDesktopControl->GetCurrentDesktopNumber();
+	if (cur == -1) {
+		return 0;
+	}
+	lua_pushnumber(L, cur+1);
 	return 1;
 }
