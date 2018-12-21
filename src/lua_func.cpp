@@ -60,7 +60,10 @@ int CreateLua() {
 	lua_register(L, "IsJoyButtonPressed", l_IsJoyButtonPressed);
 	lua_register(L, "SetGamepadVibration", l_SetGamepadVibration);
 	lua_register(L, "IsXInputEnabled", l_IsXInputEnabled);
-	lua_register(L, "AddMasterVolume", l_AddMasterVolume);
+	lua_register(L, "GetMasterVolume", l_GetMasterVolume);
+	lua_register(L, "SetMasterVolume", l_SetMasterVolume);
+	lua_register(L, "GetMasterVolumeMute", l_GetMasterVolumeMute);
+	lua_register(L, "SetMasterVolumeMute", l_SetMasterVolumeMute);
 	lua_register(L, "ToggleWindowTitle", l_ToggleWindowTitle);
 	lua_register(L, "GetClipboardText", l_GetClipboardText);
 	lua_register(L, "ListWindows", l_ListWindows);
@@ -723,7 +726,7 @@ static int l_IsXInputEnabled( lua_State *L ) {
 
 
 
-float AddMasterVolumeLevelScalar(float fMasterVolumeAdd, bool bAbsolute)
+float SetMasterVolumeLevelScalar(float fMasterVolumeAdd)
 {
     IMMDeviceEnumerator *deviceEnumerator = NULL;
     IMMDevice *defaultDevice = NULL;
@@ -748,18 +751,17 @@ float AddMasterVolumeLevelScalar(float fMasterVolumeAdd, bool bAbsolute)
             {
                 if(SUCCEEDED(endpointVolume->GetMasterVolumeLevelScalar(&fMasterVolume)))
                 {
-					if (!bAbsolute)
-						fMasterVolume += fMasterVolumeAdd;
-					else
+					if (fMasterVolumeAdd != NULL) {
 						fMasterVolume = fMasterVolumeAdd;
 
-                    if(fMasterVolume < 0.0)
-                        fMasterVolume = 0.0;
-                    else if(fMasterVolume > 1.0)
-                        fMasterVolume = 1.0;
+						if(fMasterVolume < 0.0)
+							fMasterVolume = 0.0;
+						else if(fMasterVolume > 1.0)
+							fMasterVolume = 1.0;
 
-                    if(SUCCEEDED(endpointVolume->SetMasterVolumeLevelScalar(fMasterVolume, NULL)))
-                        bSuccess = TRUE;
+						if(SUCCEEDED(endpointVolume->SetMasterVolumeLevelScalar(fMasterVolume, NULL)))
+							bSuccess = TRUE;
+					}
                 }
                 endpointVolume->Release();
             }
@@ -773,15 +775,74 @@ float AddMasterVolumeLevelScalar(float fMasterVolumeAdd, bool bAbsolute)
 	return fMasterVolume;
 }
 
+BOOL SetMasterVolumeMute(BOOL bNewMute)
+{
+	IMMDeviceEnumerator *deviceEnumerator = NULL;
+	IMMDevice *defaultDevice = NULL;
+	IAudioEndpointVolume *endpointVolume = NULL;
+	HRESULT hr;
+	BOOL bMute = 0;
+	BOOL bSuccess = FALSE;
+	const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+	const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+	const IID IID_IAudioEndpointVolume = __uuidof(IAudioEndpointVolume);
 
-static int l_AddMasterVolume( lua_State *L ) {
-	float d = luaL_checknumber(L, 1);
-	bool bAbsolute = false;
-	if (lua_isboolean(L,2))
-		if (lua_toboolean(L,2) == 1)
-			bAbsolute = true;
+	hr = CoInitialize(NULL);
 
-	lua_pushnumber(L, AddMasterVolumeLevelScalar(d, bAbsolute));
+	hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void **)&deviceEnumerator);
+	if (SUCCEEDED(hr))
+	{
+		hr = deviceEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &defaultDevice);
+		if (SUCCEEDED(hr))
+		{
+			hr = defaultDevice->Activate(IID_IAudioEndpointVolume, CLSCTX_ALL, NULL, (void **)&endpointVolume);
+			if (SUCCEEDED(hr))
+			{
+				if (SUCCEEDED(endpointVolume->GetMute(&bMute)))
+				{
+					if (bNewMute != -1) {
+						bMute = bNewMute;
+
+						if (SUCCEEDED(endpointVolume->SetMute(bMute, NULL)))
+							bSuccess = TRUE;
+					}
+				}
+				endpointVolume->Release();
+			}
+			defaultDevice->Release();
+		}
+		deviceEnumerator->Release();
+	}
+
+	CoUninitialize();
+
+	return bMute;
+}
+
+static int l_GetMasterVolumeMute(lua_State *L) {
+	lua_pushboolean(L, SetMasterVolumeMute(-1));
+	return 1;
+}
+static int l_SetMasterVolumeMute(lua_State *L) {
+	BOOL newMute = lua_toboolean(L, 1);
+	lua_pushboolean(L, SetMasterVolumeMute(newMute));
+	return 1;
+}
+
+static int l_GetMasterVolume(lua_State *L) {
+	lua_pushnumber(L, SetMasterVolumeLevelScalar(NULL));
+	return 1;
+}
+
+static int l_SetMasterVolume( lua_State *L ) {
+	float newVolume = luaL_checknumber(L, 1);
+	//bool bAbsolute = false;
+	//if (lua_isboolean(L,2))
+	//	if (lua_toboolean(L,2) == 1)
+	//		bAbsolute = true;
+
+
+	lua_pushnumber(L, SetMasterVolumeLevelScalar(newVolume));
 	return 1;
 }
 
