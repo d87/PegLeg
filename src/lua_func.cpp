@@ -83,6 +83,8 @@ int CreateLua() {
 	lua_register(L, "IsWindowMaximized", l_IsWindowMaximized);
 	lua_register(L, "GetDesktopCount", l_GetDesktopCount);
 	lua_register(L, "GetCurrentDesktopNumber", l_GetCurrentDesktopNumber);
+	lua_register(L, "MakeBorderless", l_MakeBorderless);
+	
 	
 
 	lua_register(L, "CreateFrame", l_CreateFrame);
@@ -1076,5 +1078,16 @@ static int l_GetCurrentDesktopNumber(lua_State *L) {
 		return 0;
 	}
 	lua_pushnumber(L, cur+1);
+	return 1;
+}
+
+static int l_MakeBorderless(lua_State *L) {
+	HWND topWindow = GetForegroundWindow();
+	SetWindowLongPtr(topWindow, GWL_STYLE, WS_VISIBLE);
+	SetWindowLongPtr(topWindow, GWL_EXSTYLE, NULL);
+	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+	int screenHeight= GetSystemMetrics(SM_CYSCREEN);
+	SetWindowPos(topWindow, NULL, 0, 0, screenWidth, screenHeight, SWP_NOACTIVATE | SWP_NOZORDER);
+	lua_pushnumber(L, 1);
 	return 1;
 }

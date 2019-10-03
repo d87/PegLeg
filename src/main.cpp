@@ -289,7 +289,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 	g_gamepadGroup = new GamepadGroup();
 
-	double pollingTimeout = 0.015;
+	const double pollingTimeout = 0.015;
 	double prevPollTime = 0;
 	double now = 0;
 	
