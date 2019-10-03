@@ -1,6 +1,9 @@
 #include "pegleg.h"
 #include "gamepad.h"
 
+#include <unordered_map>
+#include <vector>
+
 //#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE  7849
 //#define XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 8689
 //#define XINPUT_GAMEPAD_TRIGGER_THRESHOLD    30
@@ -8,8 +11,7 @@
 
 #define EXTRACTBIT(var, index) ((var >> index) & 1)
 
-
-char *GamepadButtonNames[17] = {
+const vector<string> GamepadButtonNames = {
 	"UP",
 	"DOWN",
 	"LEFT",
@@ -26,7 +28,46 @@ char *GamepadButtonNames[17] = {
 	"B",
 	"X",
 	"Y",
-	(char)NULL
+};
+
+const int NumMaxButtons = 16;
+
+enum XInputButton {
+	UP,
+	DOWN,
+	LEFT,
+	RIGHT,
+	START,
+	BACK,
+	LS,
+	RS,
+	L1,
+	R1,
+	UB1,
+	UB2,
+	A,
+	B,
+	X,
+	Y,
+};
+
+const unordered_map<string, XInputButton> ButtonStrToID = {
+	{ "UP", XInputButton::UP },
+	{ "DOWN", XInputButton::DOWN },
+	{ "LEFT", XInputButton::LEFT },
+	{ "RIGHT", XInputButton::RIGHT },
+	{ "START", XInputButton::START },
+	{ "BACK", XInputButton::BACK },
+	{ "LS", XInputButton::LS },
+	{ "RS", XInputButton::RS },
+	{ "L1", XInputButton::L1 },
+	{ "R1", XInputButton::R1 },
+	{ "UB1", XInputButton::UB1 },
+	{ "UB2", XInputButton::UB2 },
+	{ "A", XInputButton::A },
+	{ "B", XInputButton::B },
+	{ "X", XInputButton::X },
+	{ "Y", XInputButton::Y },
 };
 
 
@@ -80,53 +121,65 @@ int Gamepad::Poll() {
 
 	DWORD error = XInputGetState(controllerID, &state);
 	if (error == ERROR_SUCCESS) {
-		//if (state.dwPacketNumber != prevPacketNumber) {
+		if (state.dwPacketNumber != prevPacketNumber) {
 			prevPacketNumber = state.dwPacketNumber;
 
 			changedJoyButtons = prevJoyButtonState ^ state.Gamepad.wButtons;
 			prevJoyButtonState = state.Gamepad.wButtons;
 			if (changedJoyButtons) {
-				for (int btn = 0; btn<20; btn++) {
+				for (int btn = 0; btn < NumMaxButtons; btn++) {
 					if (EXTRACTBIT(changedJoyButtons, btn)) {
 						if (EXTRACTBIT(prevJoyButtonState, btn)) { // it's inverted
 							for (int i = 0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++)
-								FireEvent(L, events[JOYBUTTONDOWN][i], GamepadButtonNames[btn], btn + 1, 0);
+								FireEvent(L, events[JOYBUTTONDOWN][i], (char *)GamepadButtonNames[btn].c_str(), btn + 1, 0);
 						}
 						else {
 							for (int i = 0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++)
-								FireEvent(L, events[JOYBUTTONUP][i], GamepadButtonNames[btn], btn + 1, 0);
+								FireEvent(L, events[JOYBUTTONUP][i], (char *)GamepadButtonNames[btn].c_str(), btn + 1, 0);
 						}
 					}
 				}
 				return 1;
 			}
 
+
 			float LX = state.Gamepad.sThumbLX;
 			float LY = state.Gamepad.sThumbLY;
 			//determine how far the controller is pushed
 			float LSmagnitude = sqrt(LX*LX + LY*LY);
 
-			if (LSmagnitude > THUMB_DEADZONE)
-				return 1;
+			if (LSmagnitude > THUMB_DEADZONE) {
+				isMoving = true;
+				return isMoving;
+			}
 
 			float RX = state.Gamepad.sThumbRX;
 			float RY = state.Gamepad.sThumbRY;
 			//determine how far the controller is pushed
 			float RSmagnitude = sqrt(RX*RX + RY*RY);
 
-			if (RSmagnitude > THUMB_DEADZONE)
-				return 1;
+			if (RSmagnitude > THUMB_DEADZONE) {
+				isMoving = true;
+				return isMoving;
+			}
 
 			float LT = state.Gamepad.bLeftTrigger;
-			if (LT > XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
-				return 1;
+			if (LT > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+				isMoving = true;
+				return isMoving;
+			}
 
 			float RT = state.Gamepad.bRightTrigger;
-			if (RT > XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
-				return 1;
+			if (RT > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+				isMoving = true;
+				return isMoving;
+			}
+
+			isMoving = false;
+		}
+
 			
-		//}
-			return 0;
+		return isMoving;
 	}
 	else {
 		if (error == ERROR_DEVICE_NOT_CONNECTED) {
@@ -144,10 +197,10 @@ int Gamepad::Poll() {
 }
 
 int Gamepad::IsPressed(char *btnName) {
-	for (int i = 0; GamepadButtonNames[i]; i++)
-		if (!strcmp(_strupr((char*)btnName), GamepadButtonNames[i])) {
-			int buttonID = i;
-			return ((state.Gamepad.wButtons >> buttonID) & 1);
-		}
+	auto search = ButtonStrToID.find(btnName);
+	if (search != ButtonStrToID.end()) {
+		const int buttonID = search->second;
+		return ((state.Gamepad.wButtons >> buttonID) & 1);
+	}
 	return 0;
 }

@@ -12,6 +12,7 @@ public:
 	DWORD prevPacketNumber = 0;
 	DWORD controllerID = 0;
 	XINPUT_STATE state;
+	bool isMoving = false;
 	
 	//BOOL isConnected = 0;
 private:
