@@ -302,7 +302,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			switch (msg.message) {
 				case WM_HOTKEY:
-					FireEvent(L, events[HOTKEY][(int)msg.wParam], 0, 0, 0);
+					FireEvent(L, events[HOTKEY][(int)msg.wParam], nullptr, 0, 0);
 					break;
 				case WM_COMMAND:
 					int cmdID;
