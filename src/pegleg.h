@@ -3,8 +3,9 @@
 #define _ALLOW_RTCc_IN_STL
 #define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
+#include <unordered_map>
 
-#define KDOWN 0
+/*#define KDOWN 0
 #define KUP 1
 #define MDOWN 2
 #define MUP 3
@@ -15,7 +16,7 @@
 #define ACTIVATION 8
 #define JOYUPDATE 9
 #define JOYBUTTONDOWN 10
-#define JOYBUTTONUP 11
+#define JOYBUTTONUP 11*/
 #define MAX_EVENTS 32
 
 #define RELOADLUA 0xAAA
@@ -34,6 +35,26 @@
 //#pragma comment( lib, "XINPUT.lib" )
 #pragma comment( lib, "XINPUT9_1_0.LIB" ) // for vs2012 sdk
 
+enum PegLegEvent {
+	NULLEVENT,
+	KEYDOWN,
+	KEYUP,
+	MOUSEDOWN,
+	MOUSEUP,
+	MOUSEMOVE,
+	ONCREATE,
+	TIMER,
+	HOTKEY,
+	ACTIVATION,
+	JOYUPDATE,
+	JOYBUTTONDOWN,
+	JOYBUTTONUP,
+	//_MAXEVENTS,
+};
+extern constexpr int MAXEVENTS = PegLegEvent::JOYBUTTONUP+1;
+
+
+extern const unordered_map<string, PegLegEvent> EventStringToID;
 
 struct enum_struct {
 //	int type;
@@ -51,8 +72,7 @@ struct event_arglist {
 };
 
 
-extern int events[12][MAX_EVENTS];
-extern int timerMap[MAX_EVENTS];
+extern vector<int> events[MAXEVENTS];
 extern int mainThreadId;
 extern HHOOK hhkLowLevelKeyboard;
 extern HHOOK hhkLowLevelMouse;
@@ -64,6 +84,6 @@ extern REPL *repl;
 void EnableMouseHooks(bool enable);
 void error (lua_State *L, const char *fmt, ...);
 int Shutdown();
-int FireEvent(lua_State *L, int index, char * VK_NAME, int vkCode, int scanCode);
-int FireMouseEvent(lua_State *L, int index, int Button, int x, int y);
+void RunCallback(lua_State *L, int func_ref);
+int FireEvent(lua_State *L, PegLegEvent event, char * VK_NAME, int vkCode, int scanCode);
 static int l_RegisterEvent(lua_State *L);

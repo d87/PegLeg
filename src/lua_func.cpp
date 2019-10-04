@@ -125,8 +125,7 @@ int InitLua() {
 
 	LoadScript(L, "pegleg.init.lua");
 
-	for (int i=0; events[ONCREATE][i] && i < MAX_EVENTS; i++ )
-		FireEvent(L,events[ONCREATE][i],0, 0, 0);
+	FireEvent(L, PegLegEvent::ONCREATE,0, 0, 0);
 
 	return 1;
 }
@@ -140,13 +139,11 @@ int ReloadLua() {
 	guiAddText("!Reloading...\n");
 
 	//killing timers and hotkeys
-	for (int i=0; events[HOTKEY][i]; i++)
+	auto hotkeys = events[PegLegEvent::HOTKEY];
+	for (int i=0; i < hotkeys.size(); i++)
 		UnregisterHotKey(NULL, i);
 	Timers.clear();
-	/*for (int i=0; events[TIMER][i]; i++){
-		KillTimer(NULL, timerMap[i]);
-		timerMap[i] = 0;
-	}*/
+
 	ZeroMemory( &events, sizeof(events) ); // purging old events table
 
 	lua_close(L);
@@ -185,35 +182,32 @@ int luaB_print (lua_State *L) {
 }
 
 static int l_RegisterEvent(lua_State *L) {
-	const char * eventname = luaL_checkstring(L, 1);
+	const char * eventName = luaL_checkstring(L, 1);
 	luaL_checktype(L, 2, LUA_TFUNCTION);
 	unsigned int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-	unsigned int trig = 999;
-	if		(!strcmp(_strupr((char*)eventname),"MOUSEDOWN")) trig = MDOWN;
-	else if (!strcmp(_strupr((char*)eventname),"MOUSEUP")) trig = MUP;
-	else if (!strcmp(_strupr((char*)eventname),"KEYDOWN")) trig = KDOWN;
-	else if (!strcmp(_strupr((char*)eventname),"KEYUP")) trig = KUP;
-	else if (!strcmp(_strupr((char*)eventname),"MOUSEMOVE")) trig = MMOVE;
-	else if (!strcmp(_strupr((char*)eventname),"ONCREATE")) trig = ONCREATE;
-	else if (!strcmp(_strupr((char*)eventname),"ACTIVATION")) trig = ACTIVATION;
-	else if (!strcmp(_strupr((char*)eventname),"JOYUPDATE")) trig = JOYUPDATE;
-	else if (!strcmp(_strupr((char*)eventname),"JOYBUTTONDOWN")) trig = JOYBUTTONDOWN;
-	else if (!strcmp(_strupr((char*)eventname),"JOYBUTTONUP")) trig = JOYBUTTONUP;
-	//else if (!strcmp(_strupr((char*)eventname),"ONUPDATE")) trig = ONUPDATE;
-	
 
-	int i=0;
-	if (trig != 999) {
-		for (; events[trig][i]; i++ );
-		if ( i < MAX_EVENTS ) events[trig][i] = func_ref;
-		lua_pushnumber(L, (trig << 5)+i );
+
+	string upperEventName = string(eventName);
+	for (auto & c : upperEventName) c = toupper(c);
+
+	auto search = EventStringToID.find(upperEventName);
+	if (search != EventStringToID.end()) {
+		auto EventID = search->second;
+
+		events[EventID].push_back(func_ref);
+
+		lua_pushboolean(L, 1);
 		return 1;
 	}
+	
+
+	
 	return 0;
 }
 static int l_UnregisterEvent(lua_State *L) {
 	//if (!lua_isnumber(L, 1))
 	//		error(L, "Invalid arg#1 (expecting number)");
+	/*
 	unsigned int eventID = (int)luaL_checknumber(L, 1);
 	unsigned int eventType = eventID >> 5;
 	unsigned int eventIndex = eventID - (eventType << 5);
@@ -227,7 +221,7 @@ static int l_UnregisterEvent(lua_State *L) {
 			break;
 		}
 	}
-
+	*/
 	return 0;
 }
 
@@ -449,9 +443,8 @@ int l_RegisterHotKey( lua_State *L ) {
 	char *pEnd;
 	int mods = ParseModifiers(_strupr((char *)modstr));
 
-	int i;
-	for (i=0; events[HOTKEY][i]; i++ );
-	if ( i < MAX_EVENTS ) events[HOTKEY][i] = func_ref;
+	events[PegLegEvent::HOTKEY].push_back(func_ref);
+	int i = events[PegLegEvent::HOTKEY].size()-1;
 
 	RegisterHotKey(NULL, i, mods, vk);
 	return 0;
@@ -503,7 +496,7 @@ void ProcTimers(int elapsed){
 	for (auto it=Timers.begin(); it!=Timers.end(); it++){
 		it->second.remains -= elapsed;
 		if (it->second.remains <= 0){
-			FireEvent(L, it->second.luaFuncRef, 0, 0, 0);
+			RunCallback(L, it->second.luaFuncRef);
 			it->second.remains += it->second.interval;
 		}
 	}

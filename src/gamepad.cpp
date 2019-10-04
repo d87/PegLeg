@@ -96,8 +96,7 @@ int GamepadGroup::Poll() {
 	}
 
 	if (newPackets) {
-		for (int i = 0; events[JOYUPDATE][i] && i < MAX_EVENTS; i++)
-			FireEvent(L, events[JOYUPDATE][i], 0, 0, 0);
+		FireEvent(L, PegLegEvent::JOYUPDATE, 0, 0, 0);
 	}
 			
 	return 1;
@@ -130,12 +129,10 @@ int Gamepad::Poll() {
 				for (int btn = 0; btn < NumMaxButtons; btn++) {
 					if (EXTRACTBIT(changedJoyButtons, btn)) {
 						if (EXTRACTBIT(prevJoyButtonState, btn)) { // it's inverted
-							for (int i = 0; events[JOYBUTTONDOWN][i] && i < MAX_EVENTS; i++)
-								FireEvent(L, events[JOYBUTTONDOWN][i], (char *)GamepadButtonNames[btn].c_str(), btn + 1, 0);
+							FireEvent(L, PegLegEvent::JOYBUTTONDOWN, (char *)GamepadButtonNames[btn].c_str(), btn + 1, 0);
 						}
 						else {
-							for (int i = 0; events[JOYBUTTONUP][i] && i < MAX_EVENTS; i++)
-								FireEvent(L, events[JOYBUTTONUP][i], (char *)GamepadButtonNames[btn].c_str(), btn + 1, 0);
+							FireEvent(L, PegLegEvent::JOYBUTTONUP, (char *)GamepadButtonNames[btn].c_str(), btn + 1, 0);
 						}
 					}
 				}
@@ -176,6 +173,7 @@ int Gamepad::Poll() {
 			}
 
 			isMoving = false;
+			return 1;
 		}
 
 			

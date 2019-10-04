@@ -1,10 +1,13 @@
 #define _CRT_SECURE_NO_WARNINGS
+#define _ALLOW_RTCc_IN_STL
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <io.h>
 #include <stdlib.h>
 #include <process.h>
 #include <time.h>
+#include <vector>
 
 extern "C" {
 #include "lua/src/lua.h"
@@ -28,8 +31,7 @@ extern "C" {
 
 using namespace std;
 
-int events[12][MAX_EVENTS];
-int timerMap[MAX_EVENTS];
+vector<int> events[MAXEVENTS];
 
 HINSTANCE g_hInstance;
 HHOOK hhkLowLevelKeyboard = 0;
@@ -43,39 +45,54 @@ REPL *repl;
 
 int mainThreadId;
 
+const unordered_map<string, PegLegEvent> EventStringToID = {
+	{ "KEYDOWN", PegLegEvent::KEYDOWN },
+	{ "KEYUP", PegLegEvent::KEYUP },
+	{ "MOUSEDOWN", PegLegEvent::MOUSEDOWN },
+	{ "MOUSEUP", PegLegEvent::MOUSEUP },
+	{ "MOUSEMOVE", PegLegEvent::MOUSEMOVE },
+	{ "ONCREATE", PegLegEvent::ONCREATE },
+	{ "TIMER", PegLegEvent::TIMER },
+	{ "HOTKEY", PegLegEvent::HOTKEY },
+	{ "ACTIVATION", PegLegEvent::ACTIVATION },
+	{ "JOYUPDATE", PegLegEvent::JOYUPDATE },
+	{ "JOYBUTTONDOWN", PegLegEvent::JOYBUTTONDOWN },
+	{ "JOYBUTTONUP", PegLegEvent::JOYBUTTONUP },
+};
+
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
   int block = 0;
   if (nCode == HC_ACTION) 
   {
-	int trig = -1;
+	PegLegEvent event = PegLegEvent::NULLEVENT;
     switch (wParam) 
 	{
 		case WM_KEYDOWN:  
 		case WM_SYSKEYDOWN:
-			{ 
-				trig = KDOWN; break;
-			}
+		{ 
+			event = PegLegEvent::KEYDOWN;
+			break;
+		}
 		case WM_KEYUP:    
 		case WM_SYSKEYUP:
-			{
-				trig = KUP; break;
-			}
+		{
+			event = PegLegEvent::KEYUP;
+			break;
+		}
     }
-	if (trig != -1) {
+	if (event != PegLegEvent::NULLEVENT) {
 	
 		PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT) lParam;
-		for (int i=0; events[trig][i] && i < MAX_EVENTS; i++ )
-		{
-			if (FireEvent(L,events[trig][i],VKEYS[p->vkCode], (int)p->vkCode,(int)p->scanCode))
-				block = 1;
-		}
+		if (FireEvent(L, event, VKEYS[p->vkCode], (int)p->vkCode,(int)p->scanCode))
+			block = 1;
 	}
 			
   }
   return(block ? 1 : CallNextHookEx(NULL, nCode, wParam,lParam));
 }
 
+/*
 LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	int block = 0;
@@ -85,11 +102,11 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 		int btn = 0;
 		switch (wParam) 
 		{
-			case WM_LBUTTONDOWN: {	trig = MDOWN; btn = 1; break;	}
+			case WM_LBUTTONDOWN: { trig = MDOWN; btn = 1; break;	}
 			case WM_LBUTTONUP: { trig = MUP; btn = 1; break;	}
 
 			case WM_RBUTTONDOWN:  {	trig = MDOWN; btn = 2; break;	}
-			case WM_RBUTTONUP:  {	trig = MUP; btn = 2; break;	}
+			case WM_RBUTTONUP: { trig = MUP; btn = 2; break;	}
 
 			case WM_MBUTTONDOWN:  {	trig = MDOWN; btn = 3; break;	}
 			case WM_MBUTTONUP:  {	trig = MUP; btn = 3; break;	}
@@ -129,7 +146,7 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 	}
 	
 	return(block ? 1 : CallNextHookEx(NULL, nCode, wParam,lParam));
-}
+}*/
 
 LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam){
 	return CallNextHookEx(NULL, nCode, wParam,lParam);
@@ -142,8 +159,7 @@ void error (lua_State *L, const char *fmt, ...) {
 	if (gui.hwndConsole){
 		gui_printf(fmt, argp);
 		gui_printf("\n",0);
-	}
-	else {
+	} else {
 		FILE *f = fopen("error.log","a");
 		vfprintf(f, fmt, argp);
 		fclose(f);
@@ -155,7 +171,7 @@ void error (lua_State *L, const char *fmt, ...) {
 
 int Shutdown() {
 #ifndef _DEBUG
-	//UnhookWindowsHookEx(hhkLowLevelKeyboard);
+	UnhookWindowsHookEx(hhkLowLevelKeyboard);
 	//UnhookWindowsHookEx(hhkLowLevelMouse);
 #endif
 	//if (gui.createtray)
@@ -164,6 +180,12 @@ int Shutdown() {
 		DestroyWindow  (gui.hwnd);
 	PostQuitMessage(0);
 	return 1;
+}
+
+void RunCallback(lua_State *L, int func_ref) {
+	lua_rawgeti(L, LUA_REGISTRYINDEX, func_ref);
+	if (lua_pcall(L, 0, 0, 0) != 0)
+		error(L, "error running function: %s", lua_tostring(L, -1));
 }
 
 int ExecuteCallback(int arg_num){
@@ -177,18 +199,31 @@ int ExecuteCallback(int arg_num){
 	return isnil;
 }
 
-int FireEvent(lua_State *L, int index, char * VK_NAME, int vkCode, int scanCode) {
-	lua_rawgeti(L, LUA_REGISTRYINDEX, index);
+int FireSingleEvent(lua_State *L, PegLegEvent event, unsigned int eventIndex, char * VK_NAME, int vkCode, int scanCode) {
+	auto func_ref = events[event][eventIndex];
+	lua_rawgeti(L, LUA_REGISTRYINDEX, func_ref);
 	if (VK_NAME) {
 		lua_pushstring(L, VK_NAME);
 		lua_pushinteger(L, vkCode);
 		lua_pushinteger(L, scanCode);
 		return ExecuteCallback(3);
-	}else if (vkCode){ //for gamepad events
+	}
+	else if (vkCode) { //for gamepad events
 		lua_pushinteger(L, vkCode);
 		return ExecuteCallback(1);
 	}
 	return ExecuteCallback(0);
+}
+
+int FireEvent(lua_State *L, PegLegEvent event, char * VK_NAME, int vkCode, int scanCode) {
+	int shouldBlock = 0;
+
+	//for (auto& func_ref: events[event]) {
+	for (int i = 0; i < events[event].size(); i++) {
+		if (FireSingleEvent(L, event, i, VK_NAME, vkCode, scanCode))
+			shouldBlock = 1;
+	}
+	return shouldBlock;
 }
 int FireMouseEvent(lua_State *L, int index, int Button, int x, int y) {
 	lua_rawgeti(L, LUA_REGISTRYINDEX, index);
@@ -198,13 +233,15 @@ int FireMouseEvent(lua_State *L, int index, int Button, int x, int y) {
 	lua_pushinteger(L, y);
 	return ExecuteCallback(3);
 }
+
 void EnableMouseHooks(bool enable){
+	/*
 	if (!hhkLowLevelMouse && enable)
 		hhkLowLevelMouse  = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, g_hInstance, 0);
 	else if (hhkLowLevelMouse){
 		UnhookWindowsHookEx(hhkLowLevelMouse);
 		hhkLowLevelMouse = 0;
-	}
+	}*/
 }
 
 
@@ -272,8 +309,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	if (!lua_toboolean(L, -1)){
 		hhkLowLevelKeyboard = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInstance, 0);
 	}
-	//hhkLowLevelMouse = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, hInstance, 0);
-	//hhkActivate = SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)GetMsgProc, hInstance, 0);
+	// hhkLowLevelMouse = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, hInstance, 0);
+	// hhkActivate = SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)GetMsgProc, hInstance, 0);
 #endif
 
 	InitLua();
@@ -282,10 +319,10 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 	repl = new REPL();
 	soundplayer = new SoundPlayer();
-	pVirtualDesktopControl = new VirtualDesktopControl();
+	/* pVirtualDesktopControl = new VirtualDesktopControl();
 	if (FAILED(pVirtualDesktopControl->Initialize())) {
 		error(L, "error initializing Virtual Desktop Manager");
-	}
+	}*/
 
 	g_gamepadGroup = new GamepadGroup();
 
@@ -302,7 +339,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			switch (msg.message) {
 				case WM_HOTKEY:
-					FireEvent(L, events[HOTKEY][(int)msg.wParam], nullptr, 0, 0);
+					FireSingleEvent(L, PegLegEvent::HOTKEY, (int)msg.wParam, nullptr, 0, 0);
 					break;
 				case WM_COMMAND:
 					int cmdID;
@@ -344,7 +381,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	// end up here
 
 	soundplayer->Release();
-	pVirtualDesktopControl->Release();
+	//pVirtualDesktopControl->Release();
 	CoUninitialize();
 
 	lua_close(L);
