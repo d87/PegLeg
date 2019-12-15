@@ -84,6 +84,10 @@ int CreateLua() {
 	lua_register(L, "GetDesktopCount", l_GetDesktopCount);
 	lua_register(L, "GetCurrentDesktopNumber", l_GetCurrentDesktopNumber);
 	lua_register(L, "MakeBorderless", l_MakeBorderless);
+	lua_register(L, "explore", l_explore);
+	lua_register(L, "GetMonitorBrightness", l_GetMonitorBrightness);
+	lua_register(L, "SetMonitorBrightness", l_SetMonitorBrightness);
+	
 	
 	
 
@@ -249,6 +253,14 @@ static int l_shell ( lua_State *luaVM ) {
 	return 0;
 }
 
+static int l_explore(lua_State *luaVM) {
+	const char* file = luaL_checkstring(luaVM, 1);
+
+	ShellExecute(NULL, "explore", file, NULL, NULL, SW_SHOWNORMAL);
+
+	return 0;
+}
+
 static int l_Start ( lua_State *luaVM ) {
 	char *cmdl =  (char *)luaL_checkstring(luaVM, 1);
 	STARTUPINFO si;
@@ -257,8 +269,8 @@ static int l_Start ( lua_State *luaVM ) {
     ZeroMemory( &si, sizeof(si) );
     si.cb = sizeof(si);
     ZeroMemory( &pi, sizeof(pi) );
-	char *env = 0;
-	char *cwd = (char *)luaL_optstring(L, 2, NULL);
+	char *env = '\0';
+	const char *cwd = luaL_optstring(luaVM, 2, NULL);
 
 	int a = CreateProcess(0, cmdl, 0,0, true, CREATE_NO_WINDOW, env, cwd, &si, &pi);
 	return 0;
@@ -1083,4 +1095,52 @@ static int l_MakeBorderless(lua_State *L) {
 	SetWindowPos(topWindow, NULL, 0, 0, screenWidth, screenHeight, SWP_NOACTIVATE | SWP_NOZORDER);
 	lua_pushnumber(L, 1);
 	return 1;
+}
+
+static int l_GetMonitorBrightness(lua_State *L) {
+	auto hCurrentMonitor = MonitorFromWindow(GetActiveWindow(), MONITOR_DEFAULTTONEAREST);
+	DWORD MonitorArraySize;
+	GetNumberOfPhysicalMonitorsFromHMONITOR(hCurrentMonitor, &MonitorArraySize);
+
+	std::vector<PHYSICAL_MONITOR> PhysicalMonitors;
+	PhysicalMonitors.resize(MonitorArraySize);
+
+	bool R = GetPhysicalMonitorsFromHMONITOR(hCurrentMonitor, MonitorArraySize, &PhysicalMonitors[0]);
+
+	for (auto it = PhysicalMonitors.begin(); it != PhysicalMonitors.end(); it++) {
+		DWORD MinBrightness;
+		DWORD MaxBrightness;
+		DWORD CurBrightness;
+		if (GetMonitorBrightness(it->hPhysicalMonitor, &MinBrightness, &CurBrightness, &MaxBrightness)) {
+			lua_pushnumber(L, CurBrightness);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int l_SetMonitorBrightness(lua_State *L) {
+	int newBrightness = luaL_checkinteger(L, 1);
+	if (newBrightness > 100) newBrightness = 100;
+	if (newBrightness < 0) newBrightness = 0;
+
+	auto hCurrentMonitor = MonitorFromWindow(GetActiveWindow(), MONITOR_DEFAULTTONEAREST);
+	DWORD MonitorArraySize;
+	GetNumberOfPhysicalMonitorsFromHMONITOR(hCurrentMonitor, &MonitorArraySize);
+
+	std::vector<PHYSICAL_MONITOR> PhysicalMonitors;
+	PhysicalMonitors.resize(MonitorArraySize);
+
+	bool R = GetPhysicalMonitorsFromHMONITOR(hCurrentMonitor, MonitorArraySize, &PhysicalMonitors[0]);
+
+	for (auto it = PhysicalMonitors.begin(); it != PhysicalMonitors.end(); it++) {
+
+		if (SetMonitorBrightness(it->hPhysicalMonitor, newBrightness)) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
+
+	return 0;
 }

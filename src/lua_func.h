@@ -14,10 +14,14 @@ extern "C" {
 #include <Mmdeviceapi.h>
 #include <Endpointvolume.h>
 
+#include <physicalmonitorenumerationapi.h>
+#include <highlevelmonitorconfigurationapi.h>
+
 #include "gui.h"
 #include "inputemu.h"
 
 #pragma comment( lib, "psapi.lib" )
+#pragma comment(lib, "Dxva2.lib") // Monitor Brightness functions
 
 extern lua_State *L;
 
@@ -91,5 +95,8 @@ int l_IsWindowMaximized(lua_State *L);
 int l_GetDesktopCount(lua_State *L);
 int l_GetCurrentDesktopNumber(lua_State *L);
 int l_MakeBorderless(lua_State *L);
+int l_explore(lua_State *L);
+int l_GetMonitorBrightness(lua_State *L);
+int l_SetMonitorBrightness(lua_State *L);
 
 #endif
