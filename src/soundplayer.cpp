@@ -23,6 +23,13 @@ SoundPlayer::SoundPlayer() {
 	hr = pGraph->QueryInterface(IID_IMediaEvent, (void **)&pEvent);
 }
 
+SoundPlayer::~SoundPlayer() {
+	pControl->Release();
+	pEvent->Release();
+	pGraph->Release();
+	//CoUninitialize();
+}
+
 void SoundPlayer::Play(LPCWSTR filename) {
 	
 	HRESULT hr = pControl->Stop();
@@ -43,11 +50,4 @@ void SoundPlayer::Play(LPCWSTR filename) {
 			// can block indefinitely.
 		//}
 	}
-}
-
-void SoundPlayer::Release() {
-	pControl->Release();
-	pEvent->Release();
-	pGraph->Release();
-	//CoUninitialize();
 }

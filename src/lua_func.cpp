@@ -375,15 +375,13 @@ static int l_KeyboardInput( lua_State *L){
 }
 
 static int l_IsPressed( lua_State *L){
-	char * name = (char *)luaL_checkstring(L, 1);
-	int vkCode = 0;
-	for (int i=1; i<255; i++ ) {
-		if (VKEYS[i][0]) {
-			if (!strcmp(VKEYS[i],name))
-				vkCode = i;
-		}
+	const char * name = luaL_checkstring(L, 1);
+	int vkCode = GetVKCodeByName(name);
+
+	if (!vkCode) {
+		lua_pushboolean(L, 0);
+		return 1;
 	}
-	if (!vkCode) return 1;
 
 	lua_pushboolean(L, GetAsyncKeyState(vkCode) ? 1 : 0);
 	return 1;
@@ -445,10 +443,7 @@ int ParseModifiers(char *ptr) {
 int l_RegisterHotKey( lua_State *L ) {
 	const char * modstr = luaL_checkstring(L, 1);
 	const char * keyname = luaL_checkstring(L, 2);
-	int vk;
-	for (vk=0;vk<256;vk++)
-		if (!strcmp(VKEYS[vk],keyname))
-			break;
+	int vkCode = GetVKCodeByName(keyname);
 	luaL_checktype(L, 3, LUA_TFUNCTION);
 	int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
@@ -458,18 +453,18 @@ int l_RegisterHotKey( lua_State *L ) {
 	events[PegLegEvent::HOTKEY].push_back(func_ref);
 	int i = events[PegLegEvent::HOTKEY].size()-1;
 
-	RegisterHotKey(NULL, i, mods, vk);
+	RegisterHotKey(NULL, i, mods, vkCode);
 	return 0;
 }
 
 static int l_GetWindowProcess( lua_State *L ) {
-	unsigned long pid;
+	DWORD pid;
 	HWND hwnd = GetForegroundWindow();
 	GetWindowThreadProcessId(hwnd, &pid);
 
 	HANDLE hProcess = OpenProcess( PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid );
 
-	if (NULL != hProcess )
+	if (hProcess != nullptr)
     {
 		HMODULE hMod;
         DWORD bytesReturned = 0;
@@ -478,11 +473,10 @@ static int l_GetWindowProcess( lua_State *L ) {
         if ( EnumProcessModulesEx( hProcess, &hMod, sizeof(hMod), &bytesReturned, LIST_MODULES_ALL) )
         {
 			if (bytesReturned) {
-				char *pname = (char *)malloc(sizeof(char)*200);
+				char pname[201];
 				GetModuleBaseName( hProcess, hMod, pname, 200 );
 				lua_pushstring(L, pname);
 				lua_pushnumber(L, (UINT32)hwnd);
-				free(pname);
 				return 2;
 			}
         }

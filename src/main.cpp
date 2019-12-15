@@ -8,6 +8,8 @@
 #include <process.h>
 #include <time.h>
 #include <vector>
+#include <thread>
+#include <chrono>
 
 extern "C" {
 #include "lua/src/lua.h"
@@ -23,6 +25,7 @@ extern "C" {
 #include "gamepad.h"
 #include "repl.h"
 #include <richedit.h>
+
 
 #pragma comment( lib, "lua5.2.lib" )
 #pragma comment( lib, "Winmm.lib" )
@@ -84,7 +87,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 	if (event != PegLegEvent::NULLEVENT) {
 	
 		PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT) lParam;
-		if (FireEvent(L, event, VKEYS[p->vkCode], (int)p->vkCode,(int)p->scanCode))
+		if (FireEvent(L, event, (char *)VKEYS[p->vkCode].c_str(), (int)p->vkCode,(int)p->scanCode))
 			block = 1;
 	}
 			
@@ -266,14 +269,15 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	LoadScript(L, "pegleg.keys.lua");
 	lua_getglobal(L, "code_name");
 
-	ZeroMemory(&VKEYS, sizeof(char)*255*15);
 	for (int i=1; i<255; i++) {
 		lua_pushnumber(L, i);
 		lua_gettable(L, -2);
 		if (lua_isstring(L, -1))
-			strcpy(VKEYS[i],lua_tostring(L, -1));
+			VKEYS[i] = lua_tostring(L, -1);
+
 		lua_pop(L, 1);
 	}
+	MakeReverseLookupMap();
 	lua_close(L);
 	
 
@@ -335,7 +339,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	BOOL isDone = false;
 	MSG msg;
 	while(!isDone){
-		//while (GetMessage(&msg, NULL, 0, 0) != 0) {
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			switch (msg.message) {
 				case WM_HOTKEY:
@@ -352,9 +355,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				case WM_QUIT:
 					isDone = true;
 			}
-
-			//TranslateMessage(&msg);
-			//DispatchMessage(&msg);
 		}
 
 		now = (double)clock()/CLOCKS_PER_SEC;
@@ -366,7 +366,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			g_gamepadGroup->Poll();
 		}
 
-		Sleep(1);
+		std::this_thread::sleep_for(1ms);
 	}
 
 #ifndef _DEBUG
@@ -379,8 +379,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	// gui message loop ends
 	// WM_QUIT sent to main thread
 	// end up here
-
-	soundplayer->Release();
+	delete soundplayer;
 	//pVirtualDesktopControl->Release();
 	CoUninitialize();
 

@@ -11,6 +11,6 @@ class SoundPlayer {
 		IMediaEvent   *pEvent = NULL;
 	public:
 		SoundPlayer();
+		~SoundPlayer();
 		void Play(LPCWSTR filename);
-		void Release();
 };

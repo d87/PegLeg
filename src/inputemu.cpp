@@ -1,32 +1,52 @@
 #include "inputemu.h"
 
-char VKEYS[255][15];
 
-int KeyboardSend(char *name, int mode) {
-	int vkCode = 0;
-	for (int i=1; i<255; i++ ) {
-		if (VKEYS[i][0]) {
-			if (!strcmp(VKEYS[i],name))
-				vkCode = i;
+
+using namespace std;
+
+// char VKEYS[255][15];
+vector<string> VKEYS (255);
+unordered_map<string, int> VKCODES;
+
+void MakeReverseLookupMap() {
+	for (int i = 0; i < VKEYS.size(); i++) {
+		string VK = VKEYS[i];
+		if (!VK.empty()) {
+			VKCODES.insert(make_pair(VK, i));
 		}
 	}
-	if (!vkCode) return 1;
+}
 
-	INPUT  key={0};
-	if (mode != 1) {
-		key.type=INPUT_KEYBOARD;
-		key.ki.wVk = vkCode;
-		SendInput(1,&key,sizeof(INPUT));
+int GetVKCodeByName(const char *name) {
+	auto search = VKCODES.find(name);
+	if (search != VKCODES.end()) {
+		const int vkCode = search->second;
+		return vkCode;
 	}
-	if (mode != -1) {
-		ZeroMemory(&key,sizeof(INPUT));
-		key.type = INPUT_KEYBOARD;
-		key.ki.wVk = vkCode;
-		key.ki.dwFlags = KEYEVENTF_KEYUP;
-		SendInput(1,&key,sizeof(INPUT));
+	return NULL;
+}
+
+int KeyboardSend(char *name, int mode) {
+	
+	auto search = VKCODES.find(name);
+	if (search != VKCODES.end()) {
+		const int vkCode = search->second;
+
+		INPUT  key = { 0 };
+		if (mode != 1) {
+			key.type = INPUT_KEYBOARD;
+			key.ki.wVk = vkCode;
+			SendInput(1, &key, sizeof(INPUT));
+		}
+		if (mode != -1) {
+			ZeroMemory(&key, sizeof(INPUT));
+			key.type = INPUT_KEYBOARD;
+			key.ki.wVk = vkCode;
+			key.ki.dwFlags = KEYEVENTF_KEYUP;
+			SendInput(1, &key, sizeof(INPUT));
+		}
 	}
-	//SendInput(1,&ket,sizeof(INPUT));
-	return 1;
+	return 0;
 }
 
 int KeyboardInput(char *str) {
