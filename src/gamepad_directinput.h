@@ -3,6 +3,7 @@
 #include "gamepad.h"
 
 #include <vector>
+#include <array>
 #include <windows.h>
 
 #include <dinput.h>
@@ -23,7 +24,10 @@ public:
 private:
 	DWORD prevJoyButtonState = 0;
 	DIJOYSTATE2 js;
-	DWORD btnState;
+	DWORD btnState = 0;
+
+	std::array<int, 6> axisState{ 0,0,0,0,0,0 };
+	std::array<int, 6> prevAxisState {0,0,0,0,0,0};
 
 public:
 	DirectInputGamepad(unsigned long DIID);
@@ -45,7 +49,7 @@ public:
 	DirectInputGamepad* activeGamepad = nullptr;
 
 private:
-	UINT skipCounter = 0;
+	UINT activeRetryCounter = 0;
 
 public:
 	DirectInputGamepadGroup();

@@ -687,9 +687,10 @@ static int l_GetJoyPosInfo ( lua_State *L ) {
 
 static int l_IsJoyButtonPressed ( lua_State *L ) {
 	const char* btnName = (const char*) luaL_checkstring(L, 1);
-		
-	if (g_gamepadGroup->activeGamepad)
-		lua_pushboolean(L, g_gamepadGroup->activeGamepad->IsPressed((char*)btnName));
+	
+	Gamepad* gamepad = g_gamepadGroup->GetActiveGamepad();
+	if (gamepad)
+		lua_pushboolean(L, gamepad->IsPressed((char*)btnName));
 	else
 		lua_pushnil(L);
 	return 1;

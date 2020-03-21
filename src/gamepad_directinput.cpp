@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-//#define THUMB_DEADZONE 3200
+#define THUMB_DEADZONE 3200
 
 #define DUALSHOCK4_V1_HWID 0x05C4054C // 054C:05C4
 #define DUALSHOCK4_V2_HWID 0x09CC054C // 054C:09CC
@@ -107,6 +107,8 @@ BOOL CALLBACK EnumJoysticksCallback(const DIDEVICEINSTANCE* pdidInstance, VOID* 
 
 	if (pdidInstance->guidProduct.Data1 == DUALSHOCK4_V1_HWID || pdidInstance->guidProduct.Data1 == DUALSHOCK4_V2_HWID) {
 
+		printf("Found DualShock 4 %u\n", pdidInstance->guidProduct.Data1);
+
 		auto gamepadGroup = static_cast<DirectInputGamepadGroup*>(pContext);
 
 		DirectInputGamepad* pad = nullptr;
@@ -121,6 +123,7 @@ BOOL CALLBACK EnumJoysticksCallback(const DIDEVICEINSTANCE* pdidInstance, VOID* 
 
 		if (pad == nullptr) {
 			gamepadGroup->gamepads.push_back(DirectInputGamepad(pdidInstance->guidInstance.Data1));
+			printf("Created new gamepad\n");
 			pad = &gamepadGroup->gamepads.back();
 		}
 
@@ -190,26 +193,45 @@ int DirectInputGamepadGroup::Poll() {
 
 	BOOL newPackets = false;
 
-	int i = 0;
-	int padToRemove = -1;
-	for (DirectInputGamepad& pad : gamepads) {
-		int R = pad.Poll();
-		if (R == -1 && activeGamepad == &pad) {
-			activeGamepad = nullptr;
-			activeGamepadID = -1;
-			padToRemove = i;
-			break;
+	// A single gamepad can be connected as two separate devices, both of them working at the same time.
+	// So to combat this focus on a single device until it's not responding for several ticks, then repick
+	if (activeGamepad) {
+		int R = activeGamepad->Poll();
+		if (R == -1) {
+			activeRetryCounter++;
 		}
-		if (R == 1) {
-			activeGamepad = &pad;
-			activeGamepadID = i;
+		else {
 			newPackets = true;
+			activeRetryCounter = 0;
 		}
-		i++;
+	}
+	else{
+		activeRetryCounter = 10;
 	}
 
-	if (padToRemove > -1) {
-		gamepads.erase(gamepads.begin() + i);
+	if (activeRetryCounter > 5) {
+		int i = 0;
+		int padToRemove = -1;
+
+		for (DirectInputGamepad& pad : gamepads) {
+			int R = pad.Poll();
+			if (R == -1 && activeGamepad == &pad) {
+				activeGamepad = nullptr;
+				activeGamepadID = -1;
+				padToRemove = i;
+				break;
+			}
+			if (R == 1) {
+				activeGamepad = &pad;
+				activeGamepadID = i;
+				newPackets = true;
+			}
+			i++;
+		}
+
+		if (padToRemove > -1) {
+			gamepads.erase(gamepads.begin() + i);
+		}
 	}
 
 	if (newPackets) {
@@ -225,6 +247,7 @@ Gamepad* DirectInputGamepadGroup::GetActiveGamepad() {
 
 DirectInputGamepad::DirectInputGamepad(unsigned long instanceID) {
 	deviceInstanceID = instanceID;
+	ZeroMemory(&js, sizeof(DIJOYSTATE2));
 }
 
 int DirectInputGamepad::Poll() {
@@ -232,11 +255,12 @@ int DirectInputGamepad::Poll() {
 
 	DWORD changedJoyButtons = 0;
 
-	if (pDIDevice == nullptr || FAILED(hr = pDIDevice->Acquire())) {
+	hr = pDIDevice->Poll();
+
+	if (FAILED(hr = pDIDevice->Acquire())) {
 		return -1;
 	}
 	else {
-		hr = pDIDevice->Poll();
 
 		/*DIDEVICEOBJECTDATA devData[3];
 		DWORD dwItems = 3; // On entry, the number of elements in the array pointed to by the rgdod parameter. On exit, the number of elements actually obtained.
@@ -302,7 +326,43 @@ int DirectInputGamepad::Poll() {
 			return 1;
 		}
 
-		return 1;
+		const int mid = 0xFFFF * 0.5;
+
+		int LX = js.lX - mid;
+		if (abs(LX) < THUMB_DEADZONE) LX = 0;
+		axisState[0] = LX;
+
+		int LY = mid - js.lY;
+		if (abs(LY) < THUMB_DEADZONE) LY = 0;
+		axisState[1] = LY;
+
+		int RX = js.lZ - mid;
+		if (abs(RX) < THUMB_DEADZONE) RX = 0;
+		axisState[2] = RX;
+
+		int RY = mid - js.lRz;
+		if (abs(RY) < THUMB_DEADZONE) RY = 0;
+		axisState[3] = RY;
+
+		axisState[4] = js.lRx;
+		axisState[5] = js.lRy;
+
+		bool isMoving = false;
+		for (int i = 0; i < axisState.size(); i++) {
+			if (axisState[i] != 0) {
+				isMoving = true;
+				break;
+			}
+		}
+
+		return isMoving;
+
+		//bool axisStateChanged = axisState != prevAxisState;
+		//prevAxisState = axisState;
+		//return (axisStateChanged||changedJoyButtons) ? 1 : 0;
+
+
+
 	}
 	return -2;
 }
