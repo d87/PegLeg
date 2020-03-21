@@ -1,15 +1,16 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _ALLOW_RTCc_IN_STL
 
+#include <Windows.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <io.h>
+#include <dbt.h>  // device notification
 #include <stdlib.h>
 #include <process.h>
 #include <time.h>
 #include <vector>
 #include <thread>
-#include <chrono>
+#include <chrono> // time constants
 
 extern "C" {
 #include "lua/src/lua.h"
@@ -22,7 +23,8 @@ extern "C" {
 #include "lua_func.h"
 #include "soundplayer.h"
 #include "VirtualDesktopControl.h"
-#include "gamepad.h"
+#include "gamepad_directinput.h"
+#include "gamepad_xinput.h"
 #include "repl.h"
 #include <richedit.h>
 
@@ -247,19 +249,7 @@ void EnableMouseHooks(bool enable){
 	}*/
 }
 
-
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
-
-#ifdef _DEBUG
-	AllocConsole();
-	HWND h;
-	h=GetConsoleWindow();
-	SetActiveWindow(h);
-	int fd = _open_osfhandle( (long)GetStdHandle( STD_OUTPUT_HANDLE ), 0);
-	FILE *fp = _fdopen( fd, "w" );
-	*stdout = *fp;
-	setvbuf( stdout, NULL, _IONBF, 0 );
-#endif
 
 	mainThreadId = GetCurrentThreadId();
 	g_hInstance = hInstance;
@@ -328,7 +318,29 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		error(L, "error initializing Virtual Desktop Manager");
 	}*/
 
-	g_gamepadGroup = new GamepadGroup();
+#ifdef XINPUT
+	g_gamepadGroup = new XInputGamepadGroup();
+#endif
+	
+#ifndef XINPUT
+	g_gamepadGroup = new DirectInputGamepadGroup();
+
+	// Device Change Notification setup for direct input
+	DEV_BROADCAST_DEVICEINTERFACE notificationFilter;
+	ZeroMemory(&notificationFilter, sizeof(notificationFilter));
+
+	notificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+	notificationFilter.dbcc_size = sizeof(notificationFilter);
+
+	HDEVNOTIFY hDevNotify;
+	hDevNotify = RegisterDeviceNotification(gui.hwnd, &notificationFilter,
+		DEVICE_NOTIFY_WINDOW_HANDLE |
+		DEVICE_NOTIFY_ALL_INTERFACE_CLASSES);
+
+	if (hDevNotify == NULL) {
+		// do some error handling
+	}
+#endif
 
 	const double pollingTimeout = 0.015;
 	double prevPollTime = 0;
@@ -349,6 +361,11 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 					cmdID = (int)msg.wParam;
 					if (cmdID == RELOADLUA)
 						ReloadLua();
+					if (cmdID == DEVICECHANGE) {
+						// Event notification REQUIRES an actual hwnd for a window, so
+						// I'm giving it a console window's hwnd, and that posts WM_COMMAND to main thread
+						g_gamepadGroup->CheckDevices();
+					}
 					if (cmdID == REPL_EVAL)
 						repl->EvalTop();
 					break;
@@ -390,4 +407,17 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	return 1;
 }
 
+#ifdef _DEBUG
+int main() {
+	// Calling the wWinMain function to start the GUI program
+	// Parameters:
+	// GetModuleHandle(NULL) - To get a handle to the current instance
+	// NULL - Previous instance is not needed
+	// NULL - Command line parameters are not needed
+	// 1 - To show the window normally
+	WinMain(GetModuleHandle(NULL), NULL, NULL, 1);
 
+	//system("pause");
+	return 0;
+}
+#endif

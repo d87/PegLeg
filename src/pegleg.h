@@ -21,6 +21,7 @@
 
 #define RELOADLUA 0xAAA
 #define REPL_EVAL 0xBBB
+#define DEVICECHANGE 0xCCC
 
 #define XINPUT
 

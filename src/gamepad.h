@@ -2,35 +2,27 @@
 
 #include <vector>
 #include <windows.h>
-#include <Xinput.h>
 
-//#pragma comment( lib, "XINPUT.lib" )
-#pragma comment( lib, "XINPUT9_1_0.LIB" ) // for vs2012 sdk
+#define EXTRACTBIT(var, index) ((var >> index) & 1)
 
 class Gamepad {
 public:
-	DWORD prevPacketNumber = 0;
-	DWORD controllerID = 0;
-	XINPUT_STATE state;
-	bool isMoving = false;
-	
-	//BOOL isConnected = 0;
-private:
-	UINT skipCounter = 0;
-	DWORD prevJoyButtonState = 0;
-
-public:
-	Gamepad(unsigned int gamepadId);
-	int Poll();
-	int IsPressed(char *btnName);
+	virtual int Poll();
+	virtual int IsPressed(char *btnName);
+	virtual float GetLX();
+	virtual float GetLY();
+	virtual float GetRX();
+	virtual float GetRY();
+	virtual float GetLT();
+	virtual float GetRT();
 };
 
 class GamepadGroup {
 public:
-	std::vector<Gamepad> gamepads;
-	Gamepad *activeGamepad;
-	unsigned int activeGamepadID;
+	Gamepad *activeGamepad = nullptr;
+	unsigned int activeGamepadID = -1;
 public:
-	GamepadGroup();
-	int Poll();
+	virtual Gamepad* GetActiveGamepad();
+	virtual int CheckDevices();
+	virtual int Poll();
 };

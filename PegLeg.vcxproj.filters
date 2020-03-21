@@ -7,13 +7,14 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\onscreendisplay.cpp" />
     <ClCompile Include="src\soundplayer.cpp" />
-    <ClCompile Include="src\gamepad.cpp" />
     <ClCompile Include="src\repl.cpp" />
     <ClCompile Include="src\VirtualDesktopControl.cpp" />
+    <ClCompile Include="src\gamepad_xinput.cpp" />
+    <ClCompile Include="src\gamepad_directinput.cpp" />
+    <ClCompile Include="src\gamepad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\soundplayer.h" />
-    <ClInclude Include="src\gamepad.h" />
     <ClInclude Include="src\gui.h" />
     <ClInclude Include="src\inputemu.h" />
     <ClInclude Include="src\lua_func.h" />
@@ -22,6 +23,9 @@
     <ClInclude Include="src\repl.h" />
     <ClInclude Include="src\VirtualDesktopComObjects.h" />
     <ClInclude Include="src\VirtualDesktopControl.h" />
+    <ClInclude Include="src\gamepad_xinput.h" />
+    <ClInclude Include="src\gamepad.h" />
+    <ClInclude Include="src\gamepad_directinput.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\res.rc" />

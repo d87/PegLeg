@@ -267,6 +267,9 @@ LRESULT CALLBACK WndProc (HWND hwnd , UINT msg,WPARAM wParam , LPARAM lParam)
 			break;
 		//case WM_SIZE:
 			//break;
+		case WM_DEVICECHANGE:
+			PostThreadMessage(mainThreadId, WM_COMMAND, DEVICECHANGE, NULL);
+			break;
 		case WM_HOTKEY:
 			OnHotkey(hwnd, wParam, lParam);
 			break;

@@ -671,17 +671,18 @@ static int l_TurnOffMonitor( lua_State *L ) {
 }
 
 static int l_GetJoyPosInfo ( lua_State *L ) {
-	if (g_gamepadGroup->activeGamepad != NULL) {
-		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbLX * 100 / 0xFFFF);
-		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbLY * 100 / 0xFFFF);
-		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbRX * 100 / 0xFFFF);
-		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.sThumbRY * 100 / 0xFFFF);
-		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.bLeftTrigger * 100 / 0xFF);
-		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.Gamepad.bRightTrigger * 100 / 0xFF);
-		lua_pushnumber(L, g_gamepadGroup->activeGamepad->state.dwPacketNumber);
-		return 7;
-	}
-	return 0;
+
+	Gamepad *gamepad = g_gamepadGroup->GetActiveGamepad();
+	if (gamepad == nullptr) return 0;
+
+	lua_pushnumber(L, gamepad->GetLX());
+	lua_pushnumber(L, gamepad->GetLY());
+	lua_pushnumber(L, gamepad->GetRX());
+	lua_pushnumber(L, gamepad->GetRY());
+	lua_pushnumber(L, gamepad->GetLT());
+	lua_pushnumber(L, gamepad->GetRT());
+	
+	return 6;
 }
 
 static int l_IsJoyButtonPressed ( lua_State *L ) {
@@ -711,7 +712,6 @@ static int l_SetGamepadVibration( lua_State *L ) {
 		vibration.wLeftMotorSpeed = speed;
 	}
 	XInputSetState( g_gamepadGroup->activeGamepadID, &vibration );
-
 #endif
 	return 0;
 }
@@ -1007,7 +1007,7 @@ static int l_SetMouseSpeed(lua_State *L){
 }
 
 static int l_GetSelectedGamepad(lua_State *L) {
-	lua_pushnumber(L, g_gamepadGroup->activeGamepadID+1);
+	//lua_pushnumber(L, g_gamepadGroup->activeGamepadID+1);
 	return 1;
 }
 

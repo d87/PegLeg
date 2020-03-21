@@ -32,7 +32,7 @@ local JoyDownCallbacksDefault = setmetatable({
     ["R1"] = function() MouseInput("LEFTDOWN") end,
     ["BACK"] = function()
         if IsJoyButtonPressed(5) then
-            Start("H:\\soft\\monitors_off.exe")   
+            Start("H:\\soft\\monitors_off.exe")
         else
             KeyboardInput("(F8)")
         end
@@ -142,13 +142,14 @@ AddSequence("L1", "LEFT", "RIGHT", "L1", "LEFT", "RIGHT", "L1", function()
 end)
 
 function OnJoyButtonDown(btn, btnID)
+    print("DOWN:", btn, btnID)
     JoyDownCallbacks[btn]()
 end
 function OnJoyButtonUp(btn, btnID)
+    print("UP:", btn, btnID)
     SequenceProcess(btn)
     JoyUpCallbacks[btn]()
 end
-
 
 RegisterEvent("JoyButtonUp", OnJoyButtonUp)
 RegisterEvent("JoyButtonDown", OnJoyButtonDown)
@@ -210,6 +211,7 @@ RSHandler = RSHandlerDefault
 
 RegisterEvent("JoyUpdate",function()
     local LX,LY, RX,RY, LT,RT = GetJoyPosInfo()
+    print(LX,LY, RX,RY, LT,RT)
     L2Handler(LT)
     R2Handler(RT)
     RSHandler(RX, RY)
