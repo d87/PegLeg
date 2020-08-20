@@ -209,6 +209,7 @@
     <ClCompile Include="src\onscreendisplay.cpp" />
     <ClCompile Include="src\repl.cpp" />
     <ClCompile Include="src\soundplayer.cpp" />
+    <ClCompile Include="src\util.cpp" />
     <ClCompile Include="src\VirtualDesktopControl.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -222,6 +223,7 @@
     <ClInclude Include="src\repl.h" />
     <ClInclude Include="src\res.h" />
     <ClInclude Include="src\soundplayer.h" />
+    <ClInclude Include="src\util.h" />
     <ClInclude Include="src\VirtualDesktopComObjects.h" />
     <ClInclude Include="src\VirtualDesktopControl.h" />
   </ItemGroup>

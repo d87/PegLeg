@@ -1,5 +1,6 @@
 #include "lua_func.h"
 #include "pegleg.h"
+#include "util.h"
 
 #include <cstdlib>
 #include <string>
@@ -87,6 +88,8 @@ int CreateLua() {
 	lua_register(L, "explore", l_explore);
 	lua_register(L, "GetMonitorBrightness", l_GetMonitorBrightness);
 	lua_register(L, "SetMonitorBrightness", l_SetMonitorBrightness);
+	lua_register(L, "GetActiveExplorerWindowPath", l_GetActiveExplorerWindowPath);
+	
 	
 	
 	
@@ -940,6 +943,9 @@ static int l_SetWindowPos(lua_State *L){
 	if (!IsWindow(hwnd)) return 0;
 
 	SetWindowPos(hwnd, NULL, x, y, width, height, SWP_NOACTIVATE|SWP_NOZORDER);
+
+	PostMessage(hwnd, WM_EXITSIZEMOVE, NULL, NULL);
+
 	lua_pushboolean(L, 1);
 	return 1;
 }
@@ -1137,5 +1143,16 @@ static int l_SetMonitorBrightness(lua_State *L) {
 		}
 	}
 
+	return 0;
+}
+
+static int l_GetActiveExplorerWindowPath(lua_State* L) {
+	HWND hWnd = GetForegroundWindow();
+
+	std::string path = GetExplorerWindowPathByHWND(hWnd);
+	if (!path.empty()) {
+		lua_pushstring(L, path.c_str());
+		return 1;
+	}
 	return 0;
 }

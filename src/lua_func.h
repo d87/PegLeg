@@ -98,5 +98,6 @@ int l_MakeBorderless(lua_State *L);
 int l_explore(lua_State *L);
 int l_GetMonitorBrightness(lua_State *L);
 int l_SetMonitorBrightness(lua_State *L);
+int l_GetActiveExplorerWindowPath(lua_State* L);
 
 #endif

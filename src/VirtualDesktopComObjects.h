@@ -7,8 +7,8 @@ const CLSID CLSID_ImmersiveShell = {
 	0xC2F03A33, 0x21F5, 0x47FA, 0xB4, 0xBB, 0x15, 0x63, 0x62, 0xA2, 0xF2, 0x39 };
 
 //= new Guid("aa509086-5ca9-4c25-8f95-589d3c07b48a");
-const CLSID CLSID_VirtualDesktopManager = {
-	0xAA509086, 0x5CA9, 0x4C25, 0x8F, 0x95, 0x58, 0x9D, 0x3C, 0x07, 0xB4, 0x8A };
+//const CLSID CLSID_VirtualDesktopManager = {
+	//0xAA509086, 0x5CA9, 0x4C25, 0x8F, 0x95, 0x58, 0x9D, 0x3C, 0x07, 0xB4, 0x8A };
 
 //CLSID_VirtualDesktopManager
 
@@ -113,24 +113,24 @@ public:
 		IVirtualDesktop **ppDesktop) = 0;
 };
 
-EXTERN_C const IID IID_IVirtualDesktopManager;
+//EXTERN_C const IID IID_IVirtualDesktopManager;
 
-MIDL_INTERFACE("a5cd92ff-29be-454c-8d04-d82879fb3f1b")
-IVirtualDesktopManager : public IUnknown
-{
-public:
-	virtual HRESULT STDMETHODCALLTYPE IsWindowOnCurrentVirtualDesktop(
-		/* [in] */ __RPC__in HWND topLevelWindow,
-		/* [out] */ __RPC__out BOOL *onCurrentDesktop) = 0;
-
-	virtual HRESULT STDMETHODCALLTYPE GetWindowDesktopId(
-		/* [in] */ __RPC__in HWND topLevelWindow,
-		/* [out] */ __RPC__out GUID *desktopId) = 0;
-
-	virtual HRESULT STDMETHODCALLTYPE MoveWindowToDesktop(
-		/* [in] */ __RPC__in HWND topLevelWindow,
-		/* [in] */ __RPC__in REFGUID desktopId) = 0;
-};
+//MIDL_INTERFACE("a5cd92ff-29be-454c-8d04-d82879fb3f1b")
+//IVirtualDesktopManager : public IUnknown
+//{
+//public:
+//	virtual HRESULT STDMETHODCALLTYPE IsWindowOnCurrentVirtualDesktop(
+//		/* [in] */ __RPC__in HWND topLevelWindow,
+//		/* [out] */ __RPC__out BOOL *onCurrentDesktop) = 0;
+//
+//	virtual HRESULT STDMETHODCALLTYPE GetWindowDesktopId(
+//		/* [in] */ __RPC__in HWND topLevelWindow,
+//		/* [out] */ __RPC__out GUID *desktopId) = 0;
+//
+//	virtual HRESULT STDMETHODCALLTYPE MoveWindowToDesktop(
+//		/* [in] */ __RPC__in HWND topLevelWindow,
+//		/* [in] */ __RPC__in REFGUID desktopId) = 0;
+//};
 
 EXTERN_C const IID IID_IVirtualDesktopNotification;
 

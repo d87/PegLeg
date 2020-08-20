@@ -7,7 +7,7 @@
 //#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE  7849
 //#define XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 8689
 //#define XINPUT_GAMEPAD_TRIGGER_THRESHOLD    30
-#define THUMB_DEADZONE 3200
+#define XINPUT_THUMB_DEADZONE 8000
 
 const vector<string> GamepadButtonNames = {
 	"UP",
@@ -171,7 +171,7 @@ int XInputGamepad::Poll() {
 			//determine how far the controller is pushed
 			float LSmagnitude = sqrt(LX*LX + LY*LY);
 
-			if (LSmagnitude > THUMB_DEADZONE) {
+			if (LSmagnitude > XINPUT_THUMB_DEADZONE) {
 				isMoving = true;
 				return isMoving;
 			}
@@ -181,7 +181,7 @@ int XInputGamepad::Poll() {
 			//determine how far the controller is pushed
 			float RSmagnitude = sqrt(RX*RX + RY*RY);
 
-			if (RSmagnitude > THUMB_DEADZONE) {
+			if (RSmagnitude > XINPUT_THUMB_DEADZONE) {
 				isMoving = true;
 				return isMoving;
 			}

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <VersionHelpers.h>
+#include <Shlobj.h>
 #include "VirtualDesktopComObjects.h"
 
 

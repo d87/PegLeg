@@ -23,7 +23,7 @@
 #define REPL_EVAL 0xBBB
 #define DEVICECHANGE 0xCCC
 
-//#define XINPUT
+#define XINPUT
 
 #include "soundplayer.h"
 #include "VirtualDesktopControl.h"

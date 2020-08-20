@@ -12,6 +12,7 @@
     <ClCompile Include="src\gamepad_xinput.cpp" />
     <ClCompile Include="src\gamepad_directinput.cpp" />
     <ClCompile Include="src\gamepad.cpp" />
+    <ClCompile Include="src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\soundplayer.h" />
@@ -26,6 +27,7 @@
     <ClInclude Include="src\gamepad_xinput.h" />
     <ClInclude Include="src\gamepad.h" />
     <ClInclude Include="src\gamepad_directinput.h" />
+    <ClInclude Include="src\util.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\res.rc" />
