@@ -23,6 +23,10 @@ std::string GetExplorerWindowPathByHWND(HWND hWnd) {
 
             hr = psw->Item(index, &dispatch);
 
+            // Apparently, sometimes dispatch can be NULL ever if HR succeeded
+            if (dispatch == nullptr)
+                continue;
+
             if (SUCCEEDED(hr)) {
                 // Getting IWB2 from item's dispatch seems to be the only way to get explorer window's HWND
                 IWebBrowser2* iwb;
