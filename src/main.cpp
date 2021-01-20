@@ -28,6 +28,8 @@ extern "C" {
 #include "repl.h"
 #include <richedit.h>
 
+#undef min
+
 
 #pragma comment( lib, "lua5.2.lib" )
 #pragma comment( lib, "Winmm.lib" )
@@ -49,6 +51,14 @@ GamepadGroup *g_gamepadGroup;
 REPL *repl;
 
 int mainThreadId;
+
+const char * MouseButtonNames[] = {
+	"Button1",
+	"Button2",
+	"Button3",
+	"Button4",
+	"Button5"
+};
 
 const unordered_map<string, PegLegEvent> EventStringToID = {
 	{ "KEYDOWN", PegLegEvent::KEYDOWN },
@@ -97,40 +107,41 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
   return(block ? 1 : CallNextHookEx(NULL, nCode, wParam,lParam));
 }
 
-/*
 LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
+	// Short skip on mouse move
+	if (wParam == WM_MOUSEMOVE) return CallNextHookEx(NULL, nCode, wParam, lParam);
+
 	int block = 0;
 	if (nCode == HC_ACTION) 
 	{	
-		int trig = -1;
-		int btn = 0;
+		PegLegEvent event = PegLegEvent::NULLEVENT;
+		int btn = 1;
 		switch (wParam) 
 		{
-			case WM_LBUTTONDOWN: { trig = MDOWN; btn = 1; break;	}
-			case WM_LBUTTONUP: { trig = MUP; btn = 1; break;	}
+			case WM_LBUTTONDOWN: { event = PegLegEvent::MOUSEDOWN; btn = 1; break;	}
+			case WM_LBUTTONUP: { event = PegLegEvent::MOUSEUP; btn = 1; break;	}
 
-			case WM_RBUTTONDOWN:  {	trig = MDOWN; btn = 2; break;	}
-			case WM_RBUTTONUP: { trig = MUP; btn = 2; break;	}
+			case WM_RBUTTONDOWN:  {	event = PegLegEvent::MOUSEDOWN; btn = 2; break;	}
+			case WM_RBUTTONUP: { event = PegLegEvent::MOUSEUP; btn = 2; break;	}
 
-			case WM_MBUTTONDOWN:  {	trig = MDOWN; btn = 3; break;	}
-			case WM_MBUTTONUP:  {	trig = MUP; btn = 3; break;	}
+			case WM_MBUTTONDOWN:  {	event = PegLegEvent::MOUSEDOWN; btn = 3; break;	}
+			case WM_MBUTTONUP:  { event = PegLegEvent::MOUSEUP; btn = 3; break;	}
 
 			case WM_XBUTTONDOWN: 
 				{
 					PMSLLHOOKSTRUCT p = (PMSLLHOOKSTRUCT) lParam;
-					trig = MDOWN;
-					
-					//int btn4or5 = 
-					//(( (GET_XBUTTON_WPARAM ( p->mouseData ) == XBUTTON2) && 1 ) || ((GET_XBUTTON_WPARAM ( p->mouseData ) == XBUTTON1) && 0 ));
-					btn = 3 + GET_XBUTTON_WPARAM ( p->mouseData );
+					event = PegLegEvent::MOUSEDOWN;
+					int xbtn = GET_XBUTTON_WPARAM(p->mouseData);
+					btn = 3 + std::min(xbtn, 2);
 					break;
 				}
 			case WM_XBUTTONUP:
 				{
 					PMSLLHOOKSTRUCT p = (PMSLLHOOKSTRUCT) lParam;
-					trig = MUP;
-					btn = 3 + GET_XBUTTON_WPARAM ( p->mouseData );
+					event = PegLegEvent::MOUSEUP;
+					int xbtn = GET_XBUTTON_WPARAM(p->mouseData);
+					btn = 3 + std::min(xbtn, 2);
 					break;
 				}
 
@@ -141,17 +152,15 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam)
 					//break;
 				//}
 		}
-		if (trig != -1){
+		if (event != PegLegEvent::NULLEVENT){
 			PMSLLHOOKSTRUCT p = (PMSLLHOOKSTRUCT) lParam;
-			for (int i=0; events[trig][i] && i < MAX_EVENTS; i++ ){
-				if (FireMouseEvent(L,events[trig][i],btn, p->pt.x, p->pt.y))
-					block = 1;
-			}
+			if (FireEvent(L, event, MouseButtonNames[btn-1], p->pt.x, p->pt.y))
+				block = 1;
 		}
 	}
 	
 	return(block ? 1 : CallNextHookEx(NULL, nCode, wParam,lParam));
-}*/
+}
 
 LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam){
 	return CallNextHookEx(NULL, nCode, wParam,lParam);
@@ -177,7 +186,8 @@ void error (lua_State *L, const char *fmt, ...) {
 int Shutdown() {
 #ifndef _DEBUG
 	UnhookWindowsHookEx(hhkLowLevelKeyboard);
-	//UnhookWindowsHookEx(hhkLowLevelMouse);
+	if (hhkLowLevelMouse)
+		UnhookWindowsHookEx(hhkLowLevelMouse);
 #endif
 	//if (gui.createtray)
 		//KillTrayIcon(gui.hwnd);  //it's killed together with console window
@@ -204,7 +214,7 @@ int ExecuteCallback(int arg_num){
 	return isnil;
 }
 
-int FireSingleEvent(lua_State *L, PegLegEvent event, unsigned int eventIndex, char * VK_NAME, int vkCode, int scanCode) {
+int FireSingleEvent(lua_State *L, PegLegEvent event, unsigned int eventIndex, const char * VK_NAME, int vkCode, int scanCode) {
 	auto func_ref = events[event][eventIndex];
 	lua_rawgeti(L, LUA_REGISTRYINDEX, func_ref);
 	if (VK_NAME) {
@@ -220,7 +230,7 @@ int FireSingleEvent(lua_State *L, PegLegEvent event, unsigned int eventIndex, ch
 	return ExecuteCallback(0);
 }
 
-int FireEvent(lua_State *L, PegLegEvent event, char * VK_NAME, int vkCode, int scanCode) {
+int FireEvent(lua_State *L, PegLegEvent event, const char * VK_NAME, int vkCode, int scanCode) {
 	int shouldBlock = 0;
 
 	//for (auto& func_ref: events[event]) {
@@ -230,23 +240,16 @@ int FireEvent(lua_State *L, PegLegEvent event, char * VK_NAME, int vkCode, int s
 	}
 	return shouldBlock;
 }
-int FireMouseEvent(lua_State *L, int index, int Button, int x, int y) {
-	lua_rawgeti(L, LUA_REGISTRYINDEX, index);
-	//MOUSEMOVE//if (Button == 0xFF) ... 
-	lua_pushinteger(L, Button);
-	lua_pushinteger(L, x);
-	lua_pushinteger(L, y);
-	return ExecuteCallback(3);
-}
 
 void EnableMouseHooks(bool enable){
-	/*
+#ifndef _DEBUG
 	if (!hhkLowLevelMouse && enable)
 		hhkLowLevelMouse  = SetWindowsHookEx(WH_MOUSE_LL, LowLevelMouseProc, g_hInstance, 0);
 	else if (hhkLowLevelMouse){
 		UnhookWindowsHookEx(hhkLowLevelMouse);
-		hhkLowLevelMouse = 0;
-	}*/
+		hhkLowLevelMouse = NULL;
+	}
+#endif
 }
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
@@ -388,7 +391,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 #ifndef _DEBUG
 	UnhookWindowsHookEx(hhkLowLevelKeyboard);
-	//UnhookWindowsHookEx(hhkLowLevelMouse);
+	if (hhkLowLevelMouse)
+		UnhookWindowsHookEx(hhkLowLevelMouse);
 #endif
 
 	// tray exit command destroys console window

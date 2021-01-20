@@ -86,5 +86,5 @@ void EnableMouseHooks(bool enable);
 void error (lua_State *L, const char *fmt, ...);
 int Shutdown();
 void RunCallback(lua_State *L, int func_ref);
-int FireEvent(lua_State *L, PegLegEvent event, char * VK_NAME, int vkCode, int scanCode);
+int FireEvent(lua_State *L, PegLegEvent event, const char * VK_NAME, int vkCode, int scanCode);
 static int l_RegisterEvent(lua_State *L);

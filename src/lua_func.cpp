@@ -8,8 +8,6 @@
 #include <vector>
 
 
-using namespace std;
-
 struct PLTIMER {
 	int interval;
 	int remains;
