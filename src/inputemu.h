@@ -6,10 +6,8 @@
 #include <string>
 #include <unordered_map>
 
-using namespace std;
-
-extern vector<string> VKEYS;
-extern unordered_map<string, int> VKCODES;
+extern std::vector<std::string> VKEYS;
+extern std::unordered_map<std::string, int> VKCODES;
 extern void MakeReverseLookupMap();
 extern int GetVKCodeByName(const char *name);
 int KeyboardSend(char *name, int mode);

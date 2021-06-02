@@ -9,7 +9,7 @@
 //#define XINPUT_GAMEPAD_TRIGGER_THRESHOLD    30
 #define XINPUT_THUMB_DEADZONE 8000
 
-const vector<string> GamepadButtonNames = {
+const std::vector<std::string> GamepadButtonNames = {
 	"UP",
 	"DOWN",
 	"LEFT",
@@ -49,7 +49,7 @@ enum XInputButton {
 	Y,
 };
 
-const unordered_map<string, XInputButton> ButtonStrToID = {
+const std::unordered_map<std::string, XInputButton> ButtonStrToID = {
 	{ "UP", XInputButton::UP },
 	{ "DOWN", XInputButton::DOWN },
 	{ "LEFT", XInputButton::LEFT },

@@ -2,17 +2,15 @@
 
 
 
-using namespace std;
-
 // char VKEYS[255][15];
-vector<string> VKEYS (255);
-unordered_map<string, int> VKCODES;
+std::vector<std::string> VKEYS (255);
+std::unordered_map<std::string, int> VKCODES;
 
 void MakeReverseLookupMap() {
 	for (int i = 0; i < VKEYS.size(); i++) {
-		string VK = VKEYS[i];
+		std::string VK = VKEYS[i];
 		if (!VK.empty()) {
-			VKCODES.insert(make_pair(VK, i));
+			VKCODES.insert(std::make_pair(VK, i));
 		}
 	}
 }

@@ -46,7 +46,7 @@ int REPL::EvalTop() {
 	return 1;
 }
 
-void REPL::Store(wstring command) {
+void REPL::Store(std::wstring command) {
 	AcquireSRWLockExclusive(&lock);
 	history.insert(history.begin(), command);
 	if (history.size() > 10)
@@ -59,7 +59,7 @@ std::wstring REPL::HistoryNext() {
 	AcquireSRWLockShared(&lock);
 	if (history.empty()) return L"<None>";
 
-	wstring r = history[historyIndex];
+	std::wstring r = history[historyIndex];
 	if (historyIndex+1 < history.size()) {
 		historyIndex++;
 	}
@@ -76,7 +76,7 @@ std::wstring REPL::HistoryPrevious() {
 	if (historyIndex > 0) {
 		historyIndex--;
 	}
-	wstring r = history[historyIndex];
+	std::wstring r = history[historyIndex];
 	ReleaseSRWLockShared(&lock);
 	return r;
 }

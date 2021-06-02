@@ -6,18 +6,16 @@
 #include <queue>
 #include <windows.h>
 
-using namespace std;
-
 class REPL {
 private:
-	std::queue<wstring> replque;
+	std::queue<std::wstring> replque;
 	SRWLOCK lock;
 	UINT historyIndex;
-	std::vector<wstring> history;
+	std::vector<std::wstring> history;
 public:
 	REPL();
 	int Enqueue(WCHAR *str);
-	void Store(wstring command);
+	void Store(std::wstring command);
 	std::wstring HistoryPrevious();
 	std::wstring HistoryNext();
 	int EvalTop();

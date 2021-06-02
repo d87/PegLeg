@@ -1,4 +1,5 @@
 #include "soundplayer.h"
+#include <algorithm>
 
 SoundPlayer::SoundPlayer() {
 	// Initialize the COM library.
@@ -21,16 +22,19 @@ SoundPlayer::SoundPlayer() {
 
 	hr = pGraph->QueryInterface(IID_IMediaControl, (void **)&pControl);
 	hr = pGraph->QueryInterface(IID_IMediaEvent, (void **)&pEvent);
+	hr = pGraph->QueryInterface(IID_IBasicAudio, (void**)&pBasicAudio);
 }
 
 SoundPlayer::~SoundPlayer() {
 	pControl->Release();
 	pEvent->Release();
 	pGraph->Release();
+	pBasicAudio->Release();
 	//CoUninitialize();
 }
 
-void SoundPlayer::Play(LPCWSTR filename) {
+void SoundPlayer::Play(LPCWSTR filename, float volume) {
+	long lVolume = std::clamp((int)(volume * 10000), 0, 10000) - 10000;
 	
 	HRESULT hr = pControl->Stop();
 
@@ -38,8 +42,10 @@ void SoundPlayer::Play(LPCWSTR filename) {
 	hr = pGraph->RenderFile((LPCWSTR)filename, NULL);
 	if (SUCCEEDED(hr))
 	{
+		hr = pBasicAudio->put_Volume(lVolume);
 		// Run the graph.
 		hr = pControl->Run();
+
 		//if (SUCCEEDED(hr))
 		//{
 			//  completion.

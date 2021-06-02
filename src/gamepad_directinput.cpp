@@ -12,7 +12,7 @@
 
 const DWORD highestBit = 1 << 31;
 
-const vector<string> GamepadButtonNames = {
+const std::vector<std::string> GamepadButtonNames = {
 	"UP",
 	"RIGHT",
 	"DOWN",
@@ -56,7 +56,7 @@ enum DirectInputButton {
 	TOUCHPAD,
 };
 
-const unordered_map<string, DirectInputButton> ButtonStrToID = {
+const std::unordered_map<std::string, DirectInputButton> ButtonStrToID = {
 	{ "UP", DirectInputButton::UP },
 	{ "DOWN", DirectInputButton::DOWN },
 	{ "LEFT", DirectInputButton::LEFT },

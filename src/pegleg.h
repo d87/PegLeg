@@ -55,7 +55,7 @@ enum PegLegEvent {
 extern constexpr int MAXEVENTS = PegLegEvent::JOYBUTTONUP+1;
 
 
-extern const unordered_map<string, PegLegEvent> EventStringToID;
+extern const std::unordered_map<std::string, PegLegEvent> EventStringToID;
 
 struct enum_struct {
 //	int type;
@@ -73,7 +73,7 @@ struct event_arglist {
 };
 
 
-extern vector<int> events[MAXEVENTS];
+extern std::vector<int> events[MAXEVENTS];
 extern int mainThreadId;
 extern HHOOK hhkLowLevelKeyboard;
 extern HHOOK hhkLowLevelMouse;

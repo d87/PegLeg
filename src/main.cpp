@@ -36,9 +36,7 @@ extern "C" {
 
 #define EXTRACTBIT(var, index) ((var >> index) & 1)
 
-using namespace std;
-
-vector<int> events[MAXEVENTS];
+std::vector<int> events[MAXEVENTS];
 
 HINSTANCE g_hInstance;
 HHOOK hhkLowLevelKeyboard = 0;
@@ -60,7 +58,7 @@ const char * MouseButtonNames[] = {
 	"Button5"
 };
 
-const unordered_map<string, PegLegEvent> EventStringToID = {
+const std::unordered_map<std::string, PegLegEvent> EventStringToID = {
 	{ "KEYDOWN", PegLegEvent::KEYDOWN },
 	{ "KEYUP", PegLegEvent::KEYUP },
 	{ "MOUSEDOWN", PegLegEvent::MOUSEDOWN },
@@ -386,6 +384,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			g_gamepadGroup->Poll();
 		}
 
+		using namespace std::literals::chrono_literals;
 		std::this_thread::sleep_for(1ms);
 	}
 

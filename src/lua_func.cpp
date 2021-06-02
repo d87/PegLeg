@@ -14,8 +14,8 @@ struct PLTIMER {
 	unsigned int luaFuncRef;
 };
 
-unordered_map<std::string, PLTIMER> Timers;
-vector<HWND> wndList;
+std::unordered_map<std::string, PLTIMER> Timers;
+std::vector<HWND> wndList;
 
 lua_State *L = 0;
 
@@ -192,7 +192,7 @@ static int l_RegisterEvent(lua_State *L) {
 	unsigned int func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 
-	string upperEventName = string(eventName);
+	std::string upperEventName = std::string(eventName);
 	for (auto & c : upperEventName) c = toupper(c);
 
 	auto search = EventStringToID.find(upperEventName);
@@ -876,13 +876,13 @@ static int l_GetClipboardText(lua_State *L) {
 }
 
 BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam){
-	vector<HWND> *winList = (vector<HWND>*)lParam;
+	std::vector<HWND> *winList = (std::vector<HWND>*)lParam;
 	winList->push_back(hwnd);
 	return true;
 }
 
 static int l_ListWindows(lua_State *L){
-	vector<HWND> winList;
+	std::vector<HWND> winList;
 	EnumWindows(EnumWindowsProc, (LPARAM)&winList);
 	char *title = (char *)malloc(sizeof(char) * 200);
 
@@ -1029,6 +1029,7 @@ static int l_SelectGamepad(lua_State *L) {
 
 static int l_PlaySound(lua_State *L) {
 	std::string fn = (const char*) luaL_checkstring(L, 1);
+	float volume = luaL_optnumber(L, 2, 1.0f);
 
 	int reqChars = MultiByteToWideChar(CP_UTF8, 0, fn.c_str(), -1, 0, 0);
 
@@ -1036,7 +1037,7 @@ static int l_PlaySound(lua_State *L) {
 	MultiByteToWideChar(CP_UTF8, 0, fn.c_str(), -1, &wfn[0], reqChars);
 
 
-	soundplayer->Play(wfn.c_str());
+	soundplayer->Play(wfn.c_str(), volume);
 	lua_pushboolean(L, 1);
 	return 1;
 }
